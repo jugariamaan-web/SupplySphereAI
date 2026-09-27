@@ -1,0 +1,9 @@
+{
+  "model": "XGBoost",
+  "train_accuracy_pct": 88.11,
+  "test_accuracy_pct": 87.02,
+  "train_test_gap_pct_points": 1.09,
+  "target": "stockout_next_7_days",
+  "n_train": 91500,
+  "n_test": 44250
+}

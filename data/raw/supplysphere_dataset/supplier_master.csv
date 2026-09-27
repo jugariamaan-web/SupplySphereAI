@@ -1,0 +1,11 @@
+supplier_id,supplier_name,mean_lead_time_days,lead_time_std_days
+SUP_01,Nimbus Global Trading,3,1.35
+SUP_02,Alpine Distribution Co.,4,1.5
+SUP_03,Meridian Supply Chain,5,1.65
+SUP_04,Orion Wholesale Partners,5,1.65
+SUP_05,TechNova Supplies,6,1.8
+SUP_06,Summit Logistics Group,7,1.95
+SUP_07,BlueHarbor Industries,7,1.95
+SUP_08,Vertex Components,8,2.1
+SUP_09,Pioneer Freight & Goods,9,2.25
+SUP_10,Cascade Materials Ltd.,10,2.4

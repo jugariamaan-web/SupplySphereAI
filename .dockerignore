@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*.env
+!.env.example
+docs/
+scripts/
+run_project.bat
+*.log
+.DS_Store
+.vscode/
+.idea/

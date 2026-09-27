@@ -1,0 +1,6 @@
+warehouse_id,warehouse_name,region,demand_scale_factor
+WH_01,North Hub,North,1.3
+WH_02,West Hub,West,1.1
+WH_03,Central Hub,Central,1.0
+WH_04,East Hub,East,0.8
+WH_05,South Hub,South,0.6

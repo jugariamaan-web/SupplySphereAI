@@ -1,0 +1,23 @@
+# Secrets - never commit real credentials. Keep *.env.example tracked.
+*.env
+!*.env.example
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Node (if a frontend build step is ever added)
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+*.log
+__pycache__/
+*.py[cod]

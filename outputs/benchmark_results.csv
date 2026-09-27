@@ -1,0 +1,5 @@
+model,rmse,mae,mape,r2
+Linear Regression,139.8,110.95,3.61,0.263
+Random Forest,131.29,99.51,3.2,0.35
+XGBoost,139.09,107.66,3.49,0.2705
+LSTM,139.96,109.58,3.52,0.2613

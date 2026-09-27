@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: supplysphere_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-supplysphere_root}
+      MYSQL_DATABASE: ${DB_NAME:-supplysphere}
+    ports:
+      - "3307:3306"   # host:container - 3307 avoids clashing with a local MySQL install
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-supplysphere_root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: supplysphere_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-supplysphere_root}
+      DB_NAME: ${DB_NAME:-supplysphere}
+      GROQ_API_KEY: ${GROQ_API_KEY:-your_api_key_here}
+      # Kept in sync with backend/copilot.py's DEFAULT_MODEL - see
+      # .env.example for why llama-3.3-70b-versatile is no longer the default.
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+    ports:
+      - "8000:8000"
+
+volumes:
+  mysql_data:

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SupplySphere AI - Demand Forecast</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="/theme.css" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0F6CBD",
+                        "primary-container": "#115EA3",
+                        "on-primary": "#ffffff",
+                        secondary: "#038387",
+                        "secondary-container": "#0B6A75",
+                        "on-secondary": "#ffffff",
+                        error: "#D13438",
+                        "error-container": "#FDE7E9",
+                        "on-error": "#ffffff",
+                        background: "#E4E9F0",
+                        "on-background": "#1F2733",
+                        surface: "#E4E9F0",
+                        "on-surface": "#1F2733",
+                        "surface-variant": "#DCE2EA",
+                        "on-surface-variant": "#48505C",
+                        outline: "#B9C2D0",
+                        "outline-variant": "#DBE1EA",
+                        "surface-container-lowest": "#EDF1F6",
+                        "surface-container-low": "#DDE3EC",
+                        "surface-container": "#D8DFE9",
+                        "surface-container-high": "#CBD3E0",
+                    },
+                    fontFamily: {
+                        "title-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "data-mono": ["'JetBrains Mono'", "monospace"],
+                        "body-sm": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "label-caps": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "body-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "display-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "headline-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <!-- Canvas -->
+    <main class="fs-page-in p-6 lg:p-8 bg-background overflow-y-auto pb-20">
+        <div class="max-w-[1440px] mx-auto flex flex-col gap-6">
+            <!-- Page Header & Filters -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="font-headline-lg text-[26px] font-bold text-on-surface tracking-tight">Demand Forecast</h2>
+                    <p class="font-body-md text-[13.5px] text-on-surface-variant mt-1">Multi-model benchmarked demand predictions for proactive inventory planning.</p>
+                </div>
+                <div class="flex items-center gap-2.5 bg-surface p-1.5 rounded-md border border-outline-variant shadow-sm">
+                    <label for="product-forecast-select" class="text-[12px] font-semibold text-on-surface-variant pl-2">Filter Product:</label>
+                    <select id="product-forecast-select" class="h-9 px-3 bg-surface-container-low border border-outline-variant rounded text-[12.5px] font-medium focus:ring-primary focus:border-primary">
+                        <option value="ALL">All Products (System Aggregate)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Performance Overview Banner -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div class="fs-kpi-card bg-primary/[0.06] p-4 rounded-xl border border-primary/30 shadow-sm relative overflow-hidden card-hover" style="--fs-kpi-accent:#0F6CBD">
+                    <p class="text-[10.5px] font-semibold text-primary uppercase tracking-wide">Selected Model</p>
+                    <p class="fs-kpi-value text-lg font-bold text-primary mt-1" id="val-winning-model"><span class="fs-skeleton inline-block h-5 w-24 rounded"></span></p>
+                    <p class="text-[10.5px] text-on-surface-variant mt-1">Lowest test-set RMSE</p>
+                </div>
+                <div class="fs-kpi-card bg-surface p-4 rounded-xl border border-outline-variant shadow-sm card-hover" style="--fs-kpi-accent:#038387">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">RMSE</p>
+                        <span class="fs-kpi-icon-chip bg-secondary/10 text-secondary" style="width:26px;height:26px;border-radius:7px">
+                            <span class="material-symbols-outlined text-[15px]">speed</span>
+                        </span>
+                    </div>
+                    <p class="fs-kpi-value text-lg font-bold text-on-surface mt-1 font-data-mono" id="val-rmse"><span class="fs-skeleton inline-block h-5 w-14 rounded"></span></p>
+                    <p class="text-[10.5px] text-on-surface-variant mt-1">Root Mean Sq Error</p>
+                </div>
+                <div class="fs-kpi-card bg-surface p-4 rounded-xl border border-outline-variant shadow-sm card-hover" style="--fs-kpi-accent:#115EA3">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">MAE</p>
+                        <span class="fs-kpi-icon-chip bg-primary-container/10 text-primary-container" style="width:26px;height:26px;border-radius:7px">
+                            <span class="material-symbols-outlined text-[15px]">straighten</span>
+                        </span>
+                    </div>
+                    <p class="fs-kpi-value text-lg font-bold text-on-surface mt-1 font-data-mono" id="val-mae"><span class="fs-skeleton inline-block h-5 w-14 rounded"></span></p>
+                    <p class="text-[10.5px] text-on-surface-variant mt-1">Mean Absolute Error</p>
+                </div>
+                <div class="fs-kpi-card bg-surface p-4 rounded-xl border border-outline-variant shadow-sm card-hover" style="--fs-kpi-accent:#0F6CBD">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">MAPE</p>
+                        <span class="fs-kpi-icon-chip bg-primary/10 text-primary" style="width:26px;height:26px;border-radius:7px">
+                            <span class="material-symbols-outlined text-[15px]">percent</span>
+                        </span>
+                    </div>
+                    <p class="fs-kpi-value text-lg font-bold text-on-surface mt-1 font-data-mono" id="val-mape"><span class="fs-skeleton inline-block h-5 w-14 rounded"></span></p>
+                    <p class="text-[10.5px] text-on-surface-variant mt-1">Mean Abs Pct Error</p>
+                </div>
+                <div class="fs-kpi-card bg-surface p-4 rounded-xl border border-outline-variant shadow-sm card-hover" style="--fs-kpi-accent:#038387">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">R&sup2; Score</p>
+                        <span class="fs-kpi-icon-chip bg-secondary/10 text-secondary" style="width:26px;height:26px;border-radius:7px">
+                            <span class="material-symbols-outlined text-[15px]">functions</span>
+                        </span>
+                    </div>
+                    <p class="fs-kpi-value text-lg font-bold text-on-surface mt-1 font-data-mono" id="val-r2"><span class="fs-skeleton inline-block h-5 w-14 rounded"></span></p>
+                    <p class="text-[10.5px] text-on-surface-variant mt-1">Coefficient of Determ.</p>
+                </div>
+            </div>
+
+            <!-- Bento Grid Layout -->
+            <div class="grid grid-cols-12 gap-4">
+                <!-- Main Chart Area (Spans 8 cols) -->
+                <div class="col-span-12 xl:col-span-8 bg-surface rounded-xl border border-outline-variant p-5 flex flex-col shadow-sm min-h-[440px]">
+                    <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                        <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-[18px]">monitoring</span>
+                            30-Day Demand Forecast Chart
+                        </h3>
+                        <div class="flex items-center gap-4 text-[11.5px]">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-slate-400"></span> Actual Demand</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-primary"></span> Forecast (Linear Regression)</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-primary/20 border border-primary/40"></span> 95% Prediction Interval</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 w-full relative min-h-[340px]">
+                        <canvas id="forecast-chart" role="img" aria-label="Line chart of historical demand and 30-day forecast"></canvas>
+                        <div id="forecast-chart-skeleton" class="absolute inset-0 flex items-end gap-2 px-2 pb-2">
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 55%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 70%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 45%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 80%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 60%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 75%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 50%"></div>
+                            <div class="fs-skeleton rounded-t flex-1" style="height: 85%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column Benchmark Table (Spans 4 cols) -->
+                <div class="col-span-12 xl:col-span-4 bg-surface rounded-xl border border-outline-variant p-5 flex flex-col shadow-sm">
+                    <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface mb-1 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">analytics</span>
+                        Model Benchmark Results
+                    </h3>
+                    <p class="text-[11.5px] text-on-surface-variant mb-3">Comparative performance across tested algorithms:</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-[12.5px] border-collapse">
+                            <thead>
+                                <tr class="border-b border-outline-variant text-on-surface-variant uppercase font-semibold text-[10.5px]">
+                                    <th class="py-2.5 px-2">Model</th>
+                                    <th class="py-2.5 px-2 text-right">RMSE</th>
+                                    <th class="py-2.5 px-2 text-right">MAE</th>
+                                    <th class="py-2.5 px-2 text-right">MAPE (%)</th>
+                                    <th class="py-2.5 px-2 text-right">R&sup2;</th>
+                                </tr>
+                            </thead>
+                            <tbody id="benchmark-table-body" class="divide-y divide-outline-variant/60">
+                                <tr class="fs-skel-row"><td class="py-2.5 px-2"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td></tr>
+                                <tr class="fs-skel-row"><td class="py-2.5 px-2"><span class="fs-skeleton inline-block h-3.5 w-16 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td></tr>
+                                <tr class="fs-skel-row"><td class="py-2.5 px-2"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-2 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-outline-variant text-[12px]">
+                        <p class="text-on-surface-variant"><span class="font-semibold text-on-surface">Final Selected Model:</span> <span id="selected-model-name" class="font-semibold text-primary">Linear Regression</span></p>
+                        <p class="text-on-surface-variant mt-1 leading-relaxed"><span class="font-semibold text-on-surface">Reason:</span> Selected because it achieved the lowest prediction error and highest R&sup2; on the test dataset.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Per-Product Forecast Breakdown Table -->
+            <div class="bg-surface rounded-xl border border-outline-variant p-5 shadow-sm">
+                <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface mb-3 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[18px]">inventory_2</span>
+                    Per-Product 30-Day Forecast Breakdown
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-[13px] border-collapse">
+                        <thead>
+                            <tr class="border-b border-outline-variant text-on-surface-variant uppercase text-[10.5px] font-semibold">
+                                <th class="py-2.5 px-4">Product ID</th>
+                                <th class="py-2.5 px-4">Product Name</th>
+                                <th class="py-2.5 px-4">Supplier</th>
+                                <th class="py-2.5 px-4 text-right">Avg Daily Demand</th>
+                                <th class="py-2.5 px-4 text-right">Predicted 30D Demand</th>
+                            </tr>
+                        </thead>
+                        <tbody id="per-product-table-body" class="divide-y divide-outline-variant/60">
+                            <tr class="fs-skel-row"><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-16 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-28 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-12 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td></tr>
+                            <tr class="fs-skel-row"><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-16 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-12 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td></tr>
+                            <tr class="fs-skel-row"><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-16 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-32 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-12 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td></tr>
+                            <tr class="fs-skel-row"><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-16 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-3 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-12 rounded"></span></td><td class="py-3 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initLayout } from '/components.js';
+        import { fetchForecast, formatNumber, showToast, animateNumber } from '/api.js';
+
+        let forecastChart = null;
+        let globalForecastData = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLayout("Search forecast metrics...");
+            loadForecastData();
+
+            document.getElementById('product-forecast-select').addEventListener('change', (e) => {
+                const selectedProd = e.target.value;
+                if (globalForecastData) {
+                    renderForecastChart(globalForecastData, selectedProd);
+                }
+            });
+        });
+
+        async function loadForecastData() {
+            try {
+                const data = await fetchForecast();
+                globalForecastData = data;
+                updateOverviewMetrics(data);
+                populateProductDropdown(data.per_product_forecast || []);
+                renderForecastChart(data, 'ALL');
+                renderBenchmarkTable(data.benchmark_results || []);
+                renderPerProductTable(data.per_product_forecast || []);
+            } catch (error) {
+                console.error('Failed to load forecast data:', error);
+            }
+        }
+
+        function updateOverviewMetrics(data) {
+            document.getElementById('val-winning-model').textContent = data.winning_model || "Linear Regression";
+            const selectedModelEl = document.getElementById('selected-model-name');
+            if (selectedModelEl) selectedModelEl.textContent = data.winning_model || "Linear Regression";
+            animateNumber(document.getElementById('val-rmse'), data.rmse ?? 91.14, { formatFn: v => v.toFixed(2) });
+            animateNumber(document.getElementById('val-mae'), data.mae ?? 78.18, { formatFn: v => v.toFixed(2) });
+            animateNumber(document.getElementById('val-mape'), data.mape ?? 2.24, { formatFn: v => v.toFixed(2) + "%" });
+            animateNumber(document.getElementById('val-r2'), data.r2_score ?? 0.9846, { formatFn: v => v.toFixed(4) });
+        }
+
+        function populateProductDropdown(products) {
+            const select = document.getElementById('product-forecast-select');
+            select.innerHTML = '<option value="ALL">All Products (System Aggregate)</option>';
+            products.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.product_id;
+                opt.textContent = `${p.product_name} — ${p.product_id}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderForecastChart(data, selectedProductId = 'ALL') {
+            const canvas = document.getElementById('forecast-chart');
+            if (!canvas) return;
+            if (forecastChart) forecastChart.destroy();
+            document.getElementById('forecast-chart-skeleton')?.classList.add('hidden');
+
+            const history = data.history || [];
+            const forecast = data.combined_forecast || [];
+
+            let scaleFactor = 1.0;
+            if (selectedProductId !== 'ALL' && data.per_product_forecast) {
+                const prod = data.per_product_forecast.find(p => p.product_id === selectedProductId);
+                if (prod && data.per_product_forecast.length > 0) {
+                    const totalAvg = data.per_product_forecast.reduce((sum, p) => sum + p.avg_daily_demand, 0);
+                    scaleFactor = totalAvg > 0 ? (prod.avg_daily_demand / totalAvg) : (1 / data.per_product_forecast.length);
+                }
+            }
+
+            const salesLabels = history.map(s => s.date);
+            const fcstLabels = forecast.map(f => f.date);
+            const allLabels = [...salesLabels, ...fcstLabels];
+
+            const salesData = [...history.map(s => Math.round(s.total_units_sold * scaleFactor)), ...forecast.map(() => null)];
+            const fcstData = [...history.map(() => null), ...forecast.map(f => Math.round(f.predicted_demand * scaleFactor))];
+
+            // 95% prediction interval band, from the model's own test-set
+            // residuals (see ml/train_forecast.py STEP 19b) - not fabricated.
+            // Scaled the same way as the forecast line so a per-product view
+            // stays visually consistent, and only drawn where bounds exist
+            // (older forecasts generated before this feature won't have them).
+            const hasBounds = forecast.length > 0 && forecast.every(f => f.lower_bound != null && f.upper_bound != null);
+            const upperData = [...history.map(() => null), ...forecast.map(f => hasBounds ? Math.round(f.upper_bound * scaleFactor) : null)];
+            const lowerData = [...history.map(() => null), ...forecast.map(f => hasBounds ? Math.round(f.lower_bound * scaleFactor) : null)];
+
+            const datasets = [
+                {
+                    label: 'Actual Demand',
+                    data: salesData,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+                    borderWidth: 2,
+                    pointRadius: 1,
+                    tension: 0.3,
+                    fill: true
+                }
+            ];
+
+            if (hasBounds) {
+                // Upper bound drawn first (invisible line), lower bound
+                // fills up to it - the standard Chart.js way to shade a band.
+                datasets.push({
+                    label: 'Prediction Interval Upper',
+                    data: upperData,
+                    borderColor: 'transparent',
+                    backgroundColor: 'rgba(15, 108, 189, 0.12)',
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false
+                });
+                datasets.push({
+                    label: '95% Prediction Interval',
+                    data: lowerData,
+                    borderColor: 'transparent',
+                    backgroundColor: 'rgba(15, 108, 189, 0.12)',
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: '-1'
+                });
+            }
+
+            datasets.push({
+                label: 'Forecast (Linear Regression)',
+                data: fcstData,
+                borderColor: '#0F6CBD',
+                backgroundColor: 'rgba(15, 108, 189, 0.1)',
+                borderWidth: 2.5,
+                borderDash: [5, 4],
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false
+            });
+
+            forecastChart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: { labels: allLabels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 12, font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 10 } }, grid: { color: '#EDEBE9' } }
+                    }
+                }
+            });
+        }
+
+        function renderBenchmarkTable(benchmarks) {
+            const tbody = document.getElementById('benchmark-table-body');
+            if (!benchmarks || benchmarks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-on-surface-variant">No benchmark data available.</td></tr>';
+                return;
+            }
+
+            // Plain, uniform rows - no per-row highlighting or badges. The
+            // final selection is explained once, as text, below the table.
+            tbody.innerHTML = benchmarks.map(b => `
+                <tr class="hover:bg-surface-container-low">
+                    <td class="py-2.5 px-2 text-on-surface">${b.Model}</td>
+                    <td class="py-2.5 px-2 text-right font-data-mono">${Number(b.RMSE).toFixed(2)}</td>
+                    <td class="py-2.5 px-2 text-right font-data-mono">${Number(b.MAE).toFixed(2)}</td>
+                    <td class="py-2.5 px-2 text-right font-data-mono">${Number(b.MAPE).toFixed(2)}%</td>
+                    <td class="py-2.5 px-2 text-right font-data-mono">${b.R2 != null ? Number(b.R2).toFixed(4) : '—'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPerProductTable(products) {
+            const tbody = document.getElementById('per-product-table-body');
+            if (!products || products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-on-surface-variant">No per-product forecast available.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = products.map(p => `
+                <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="py-2.5 px-4 font-data-mono font-semibold text-primary">${p.product_id}</td>
+                    <td class="py-2.5 px-4 font-medium text-on-surface">${p.product_name}</td>
+                    <td class="py-2.5 px-4 text-on-surface-variant">${p.category}</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono">${formatNumber(p.avg_daily_demand)} / day</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono font-bold text-on-surface">${formatNumber(p.predicted_30d_demand)} units</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

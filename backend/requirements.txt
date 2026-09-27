@@ -1,0 +1,26 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+mysql-connector-python==9.0.0
+python-dotenv==1.0.1
+# groq>=1.0 required - 0.11.0 (the old pin) builds its internal httpx client
+# with a `proxies=` kwarg that httpx>=0.28 removed, which makes EVERY Groq
+# call fail at client construction with:
+#   TypeError: Client.__init__() got an unexpected keyword argument 'proxies'
+# pip has no reason to hold httpx back (nothing here pins it), so a fresh
+# install pulls the latest httpx and hits this immediately. Upgrading groq
+# (verified against the exact chat.completions.create(...) call used in
+# copilot.py - model/messages/temperature/max_tokens/timeout all still
+# valid) fixes it without pinning httpx backwards.
+groq>=1.6.0
+pydantic==2.9.2
+pandas
+numpy
+matplotlib
+scikit-learn
+xgboost
+tensorflow
+
+# Added for backend-generated Executive Report PDFs (/api/report/pdf) -
+# renders a real PDF file server-side instead of relying on the browser's
+# window.print() "Save as PDF" flow. Pure-Python, no system dependencies.
+reportlab

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SupplySphere AI - Inventory Plan</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0F6CBD",
+                        "primary-container": "#115EA3",
+                        "on-primary": "#ffffff",
+                        secondary: "#038387",
+                        "secondary-container": "#0B6A75",
+                        "on-secondary": "#ffffff",
+                        error: "#D13438",
+                        "error-container": "#FDE7E9",
+                        "on-error": "#ffffff",
+                        background: "#E4E9F0",
+                        "on-background": "#1F2733",
+                        surface: "#E4E9F0",
+                        "on-surface": "#1F2733",
+                        "surface-variant": "#DCE2EA",
+                        "on-surface-variant": "#48505C",
+                        outline: "#B9C2D0",
+                        "outline-variant": "#DBE1EA",
+                        "surface-container-lowest": "#EDF1F6",
+                        "surface-container-low": "#DDE3EC",
+                        "surface-container": "#D8DFE9",
+                        "surface-container-high": "#CBD3E0",
+                    },
+                    fontFamily: {
+                        "title-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "data-mono": ["'JetBrains Mono'", "monospace"],
+                        "body-sm": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "label-caps": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "body-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "display-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "headline-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="/theme.css" rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Canvas -->
+    <main class="fs-page-in p-6 lg:p-8 bg-background overflow-y-auto pb-20">
+        <div class="max-w-[1440px] mx-auto flex flex-col gap-6">
+            <!-- Header Area -->
+            <div>
+                <h2 class="font-headline-lg text-[26px] font-bold text-on-surface tracking-tight">Inventory Recommendations</h2>
+                <p class="font-body-md text-[13.5px] text-on-surface-variant mt-1">AI-driven optimization for safety stock, reorder point, and replenishment quantities.</p>
+            </div>
+
+            <!-- Controls -->
+            <div class="bg-surface rounded-xl border border-outline-variant p-5 flex flex-wrap gap-4 items-end shadow-sm">
+                <div class="w-48 min-w-[180px]">
+                    <label for="inventory-category-filter" class="block text-[11.5px] font-semibold text-on-surface-variant mb-1.5">Supplier Filter</label>
+                    <select id="inventory-category-filter" class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-[12.5px] font-medium focus:ring-primary focus:border-primary">
+                        <option value="ALL">All Suppliers</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[240px]">
+                    <label for="product-select" class="block text-[11.5px] font-semibold text-on-surface-variant mb-1.5">Select Product</label>
+                    <select id="product-select" class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-[13px] font-medium focus:ring-primary focus:border-primary">
+                        <option value="">Loading available products...</option>
+                    </select>
+                </div>
+                <div class="w-56 min-w-[180px]">
+                    <label for="current-stock-input" class="block text-[11.5px] font-semibold text-on-surface-variant mb-1.5">Current Stock (Units)</label>
+                    <input type="number" id="current-stock-input" min="0" placeholder="Defaults to avg stock" class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded text-[13px] font-data-mono focus:ring-primary focus:border-primary" />
+                </div>
+                <button id="calculate-inventory-btn" class="h-10 px-5 bg-primary text-on-primary rounded-md font-semibold text-[13px] hover:bg-primary-container transition-colors flex items-center gap-2 shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">calculate</span>
+                    Analyze Stock
+                </button>
+            </div>
+
+            <!-- Stock Health Metrics Bento Grid -->
+            <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- EOQ Card -->
+                <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-5 flex flex-col justify-between card-hover shadow-sm" style="--fs-kpi-accent:#0F6CBD">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">EOQ (Units)</h3>
+                        <span class="fs-kpi-icon-chip bg-primary/10 text-primary">
+                            <span class="material-symbols-outlined text-[19px]">calculate</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-data-mono text-[30px] font-bold text-on-background mt-2" id="kpi-eoq">--</div>
+                    <div class="text-[11px] text-on-surface-variant mt-1">Economic Order Quantity</div>
+                </div>
+
+                <!-- Safety Stock Card -->
+                <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-5 flex flex-col justify-between card-hover shadow-sm" style="--fs-kpi-accent:#038387">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Safety Stock</h3>
+                        <span class="fs-kpi-icon-chip bg-secondary/10 text-secondary">
+                            <span class="material-symbols-outlined text-[19px]">security</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-data-mono text-[30px] font-bold text-on-background mt-2" id="kpi-safety-stock">--</div>
+                    <div class="text-[11px] text-on-surface-variant mt-1">Buffer stock level</div>
+                </div>
+
+                <!-- Reorder Point Card -->
+                <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-5 flex flex-col justify-between card-hover shadow-sm" style="--fs-kpi-accent:#115EA3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Reorder Point</h3>
+                        <span class="fs-kpi-icon-chip bg-primary-container/10 text-primary-container">
+                            <span class="material-symbols-outlined text-[19px]">sync_alt</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-data-mono text-[30px] font-bold text-on-background mt-2" id="kpi-reorder-point">--</div>
+                    <div class="text-[11px] text-on-surface-variant mt-1">Trigger order threshold</div>
+                </div>
+
+                <!-- Stockout Probability Card -->
+                <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-5 flex flex-col justify-between card-hover shadow-sm" style="--fs-kpi-accent:#D13438">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Stockout Risk Prob</h3>
+                        <span class="fs-kpi-icon-chip bg-error/10 text-error">
+                            <span class="material-symbols-outlined text-[19px]">warning</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-data-mono text-[30px] font-bold text-on-background mt-2" id="kpi-stockout-prob">--</div>
+                    <div class="text-[11px] text-on-surface-variant mt-1">Model risk probability</div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Inventory Status Table Area -->
+                <section class="lg:col-span-2 bg-surface rounded-xl border border-outline-variant overflow-hidden flex flex-col shadow-sm">
+                    <div class="p-4 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+                        <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface">Calculated Plan Metrics</h3>
+                        <div class="relative w-60">
+                            <span aria-hidden="true" class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[16px]">search</span>
+                            <input id="inventory-search" type="text" aria-label="Search table metrics" placeholder="Search table metrics..." class="w-full pl-8 pr-3 py-1.5 bg-surface border border-outline-variant rounded text-[12px] font-medium focus:ring-primary focus:border-primary" />
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 overflow-x-auto">
+                        <table class="w-full text-left text-[13px] border-collapse">
+                            <thead>
+                                <tr class="border-b border-outline-variant text-[10.5px] text-on-surface-variant uppercase font-semibold">
+                                    <th class="py-2.5 px-4">Metric</th>
+                                    <th class="py-2.5 px-4 text-right">Value</th>
+                                    <th class="py-2.5 px-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="divide-y divide-outline-variant/60">
+                                <tr>
+                                    <td colspan="3" class="p-8 text-center text-on-surface-variant">
+                                        Please select a product and click <strong>Analyze Stock</strong>.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- AI Recommendations Panel -->
+                <aside class="flex flex-col gap-4">
+                    <div class="bg-surface rounded-xl border border-outline-variant p-5 flex-1 flex flex-col shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-[3px] bg-primary"></div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-primary text-[18px]">auto_awesome</span>
+                            <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface">AI Inventory Recommendation</h3>
+                        </div>
+                        <div class="flex flex-col gap-3 flex-1 overflow-y-auto" id="ai-insights-container">
+                            <p class="text-on-surface-variant text-[13px]">Select a product to generate replenishment recommendations.</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initLayout } from '/components.js';
+        import { fetchProducts, fetchInventoryPlan, formatNumber, showToast, animateNumber, inventoryHealthBadgeClass } from '/api.js';
+
+        let allProducts = [];
+        let latestRequestToken = 0; // guards against out-of-order async responses overwriting the UI
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initLayout("Search inventory formulas...");
+
+            try {
+                const data = await fetchProducts();
+                allProducts = data.products || [];
+                populateCategories(allProducts);
+                renderProductSelectOptions(allProducts);
+
+                if (allProducts.length > 0) {
+                    document.getElementById('product-select').value = allProducts[0].product_id;
+                    loadInventoryPlan();
+                }
+            } catch (e) {
+                console.error("Failed to fetch products", e);
+            }
+
+            document.getElementById('calculate-inventory-btn').addEventListener('click', () => {
+                showToast("Analyzing stock metrics...", "info");
+                loadInventoryPlan();
+            });
+
+            document.getElementById('product-select').addEventListener('change', () => {
+                document.getElementById('current-stock-input').value = ''; // don't carry over the previous product's stock override
+                loadInventoryPlan();
+            });
+
+            document.getElementById('inventory-category-filter').addEventListener('change', (e) => {
+                const selectedCat = e.target.value;
+                const filtered = selectedCat === 'ALL'
+                    ? allProducts
+                    : allProducts.filter(p => p.category === selectedCat);
+                renderProductSelectOptions(filtered);
+                document.getElementById('current-stock-input').value = '';
+                if (filtered.length > 0) {
+                    document.getElementById('product-select').value = filtered[0].product_id;
+                    loadInventoryPlan();
+                }
+            });
+
+            document.getElementById('inventory-search').addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('#inventory-table-body tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+
+            document.getElementById('current-stock-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') loadInventoryPlan();
+            });
+        });
+
+        function populateCategories(products) {
+            const categories = [...new Set(products.map(p => p.category))].sort();
+            const catSelect = document.getElementById('inventory-category-filter');
+            catSelect.innerHTML = '<option value="ALL">All Suppliers</option>';
+            categories.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        function renderProductSelectOptions(products) {
+            const select = document.getElementById('product-select');
+            if (products.length === 0) {
+                select.innerHTML = '<option value="">No products found in category</option>';
+                return;
+            }
+            select.innerHTML = products.map(p => `
+                <option value="${p.product_id}">${p.product_name} — ${p.product_id} (${p.category})</option>
+            `).join('');
+        }
+
+        async function loadInventoryPlan() {
+            const productId = document.getElementById('product-select').value;
+            const stockInputVal = document.getElementById('current-stock-input').value;
+            const currentStock = stockInputVal !== '' ? parseFloat(stockInputVal) : null;
+
+            if (!productId) {
+                showToast("Please select a product.", "warning");
+                return;
+            }
+
+            const requestToken = ++latestRequestToken;
+            const analyzeBtn = document.getElementById('calculate-inventory-btn');
+            const originalBtnHtml = analyzeBtn.innerHTML;
+            analyzeBtn.disabled = true;
+            analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            analyzeBtn.innerHTML = '<span class="material-symbols-outlined text-[17px] animate-spin">progress_activity</span> Analyzing...';
+            setKpiSkeleton(true);
+
+            try {
+                const data = await fetchInventoryPlan(productId, currentStock);
+                // If the user switched products/filters again while this request was
+                // in flight, a newer request has already started - discard this
+                // now-stale response instead of overwriting the UI with old data.
+                if (requestToken !== latestRequestToken) return;
+
+                if (!data.error) {
+                    // Reflect the actual stock value used (default or override) so the field is never stale
+                    document.getElementById('current-stock-input').value = data.current_stock;
+                }
+                updateInventoryKPIs(data);
+                updateInventoryTable(data);
+                updateAIInsights(data);
+            } catch (error) {
+                if (requestToken !== latestRequestToken) return;
+                console.error('Failed to load inventory plan:', error);
+            } finally {
+                if (requestToken === latestRequestToken) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    analyzeBtn.innerHTML = originalBtnHtml;
+                }
+            }
+        }
+
+        function setKpiSkeleton(loading) {
+            ['kpi-eoq', 'kpi-safety-stock', 'kpi-reorder-point', 'kpi-stockout-prob'].forEach(id => {
+                const el = document.getElementById(id);
+                if (loading) el.innerHTML = '<span class="fs-skeleton inline-block h-7 w-16 rounded"></span>';
+            });
+        }
+
+        function updateInventoryKPIs(data) {
+            if (data.error) {
+                document.getElementById('kpi-eoq').textContent = '--';
+                document.getElementById('kpi-safety-stock').textContent = '--';
+                document.getElementById('kpi-reorder-point').textContent = '--';
+                document.getElementById('kpi-stockout-prob').textContent = '--';
+                return;
+            }
+
+            animateNumber(document.getElementById('kpi-eoq'), data.eoq);
+            animateNumber(document.getElementById('kpi-safety-stock'), data.safety_stock);
+            animateNumber(document.getElementById('kpi-reorder-point'), data.reorder_point);
+            document.getElementById('kpi-stockout-prob').textContent = (data.stockout_probability || 0).toFixed(1) + '%';
+        }
+
+        function updateInventoryTable(data) {
+            const tbody = document.getElementById('inventory-table-body');
+            if (data.error) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-error">${data.error}</td></tr>`;
+                return;
+            }
+
+            const statusClass = inventoryHealthBadgeClass(data.inventory_health);
+
+            tbody.innerHTML = `
+                <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="py-2.5 px-4 font-semibold text-on-surface">Product ID / Name</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono font-bold text-primary">${data.product_id} (${data.product_name})</td>
+                    <td class="py-2.5 px-4 text-right"><span class="fs-badge fs-badge-primary">${data.category}</span></td>
+                </tr>
+                <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="py-2.5 px-4 font-semibold text-on-surface">Current Stock On-Hand</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono font-bold text-on-surface">${formatNumber(data.current_stock)} units</td>
+                    <td class="py-2.5 px-4 text-right"><span class="fs-badge ${statusClass}">${data.inventory_health}</span></td>
+                </tr>
+                <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="py-2.5 px-4 font-semibold text-on-surface">Average Daily Demand</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono text-on-surface">${formatNumber(data.avg_daily_demand)} units/day</td>
+                    <td class="py-2.5 px-4 text-right"><span class="text-[11px] text-on-surface-variant">Std Dev: ${data.demand_std_dev}</span></td>
+                </tr>
+                <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="py-2.5 px-4 font-semibold text-on-surface">Days Inventory Remaining</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono font-bold text-on-surface">${data.days_remaining} days</td>
+                    <td class="py-2.5 px-4 text-right"><span class="text-[11px] text-on-surface-variant">Until Stockout</span></td>
+                </tr>
+                <tr class="hover:bg-surface-container-low transition-colors">
+                    <td class="py-2.5 px-4 font-semibold text-on-surface">Supplier Lead Time</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono text-on-surface">${data.lead_time_days} days</td>
+                    <td class="py-2.5 px-4 text-right"><span class="text-[11px] text-on-surface-variant">Avg. per this product</span></td>
+                </tr>
+                <tr class="hover:bg-surface-container-low transition-colors bg-primary/[0.04]">
+                    <td class="py-2.5 px-4 font-semibold text-primary">Recommended Order Quantity</td>
+                    <td class="py-2.5 px-4 text-right font-data-mono font-bold text-primary text-[14px]">${formatNumber(data.recommended_order_qty)} units</td>
+                    <td class="py-2.5 px-4 text-right">
+                        <span class="fs-badge font-bold ${data.recommended_order_qty > 0 ? 'bg-primary text-on-primary border-primary' : 'fs-badge-neutral'}">
+                            ${data.recommended_order_qty > 0 ? 'ORDER NOW' : 'STABLE'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function updateAIInsights(data) {
+            const container = document.getElementById('ai-insights-container');
+            if (data.error) {
+                container.innerHTML = `<p class="text-error">${data.error}</p>`;
+                return;
+            }
+
+            const insights = [];
+
+            // "Action Required" fires on inventory_health (Warning/Critical),
+            // which is a RUNWAY check (days_remaining vs lead_time_days) -
+            // see classify_inventory_health() in backend/inventory.py.
+            // reorder_point / recommended_order_qty come from a SEPARATE,
+            // independent check (current_stock vs reorder_point). The two
+            // can disagree: a product can have short runway relative to
+            // lead time while still sitting above its reorder point (e.g.
+            // a short lead-time product with high daily demand). Branch on
+            // which condition actually triggered so the message never
+            // claims "below reorder point" when it isn't, and never tells
+            // someone to order "0 units immediately".
+            const belowReorderPoint = data.current_stock < data.reorder_point;
+
+            if (belowReorderPoint) {
+                insights.push({
+                    icon: 'warning', color: 'text-error', bgColor: 'bg-red-50 border-red-200',
+                    title: 'Action Required',
+                    description: `Stock level (${formatNumber(data.current_stock)}) is below reorder point (${formatNumber(data.reorder_point)}). Place replenishment order of ${formatNumber(data.recommended_order_qty)} units immediately.`
+                });
+            } else if (data.inventory_health === 'Critical' || data.inventory_health === 'Warning') {
+                insights.push({
+                    icon: 'schedule', color: 'text-error', bgColor: 'bg-red-50 border-red-200',
+                    title: 'Runway Below Lead Time',
+                    description: `Stock (${formatNumber(data.current_stock)} units) is still above the reorder point (${formatNumber(data.reorder_point)}), but at the current demand rate it covers only ${data.days_remaining} days against a ${data.lead_time_days}-day supplier lead time. No order is triggered by the reorder-point rule yet - monitor closely.`
+                });
+            } else {
+                insights.push({
+                    icon: 'check_circle', color: 'text-green-600', bgColor: 'bg-green-50 border-green-200',
+                    title: 'Stock Level Healthy',
+                    description: `Inventory level is sufficient (${formatNumber(data.current_stock)} units, ~${data.days_remaining} days remaining). No immediate order required.`
+                });
+            }
+
+            insights.push({
+                icon: 'calculate', color: 'text-primary', bgColor: 'bg-blue-50 border-blue-200',
+                title: 'Economic Order Quantity (EOQ)',
+                description: `Optimal order batch size is calculated as ${formatNumber(data.eoq)} units to minimize total setup and holding costs.`
+            });
+
+            insights.push({
+                icon: 'security', color: 'text-secondary', bgColor: 'bg-teal-50 border-teal-200',
+                title: 'Safety Stock Buffer',
+                description: `Safety stock buffer of ${formatNumber(data.safety_stock)} units protects against demand standard deviation (${data.demand_std_dev}) over a ${data.lead_time_days}-day lead time.`
+            });
+
+            container.innerHTML = insights.map(insight => `
+                <div class="p-3.5 rounded-lg border ${insight.bgColor} space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined ${insight.color} text-[18px]">${insight.icon}</span>
+                        <p class="text-[13px] font-semibold text-on-surface">${insight.title}</p>
+                    </div>
+                    <p class="text-[11.5px] text-on-surface-variant pl-6 leading-relaxed">${insight.description}</p>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

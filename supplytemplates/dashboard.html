@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SupplySphere AI - Overview Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="/theme.css" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0F6CBD",
+                        "primary-container": "#115EA3",
+                        "on-primary": "#ffffff",
+                        secondary: "#038387",
+                        "secondary-container": "#0B6A75",
+                        "on-secondary": "#ffffff",
+                        error: "#D13438",
+                        "error-container": "#FDE7E9",
+                        "on-error": "#ffffff",
+                        background: "#E4E9F0",
+                        "on-background": "#1F2733",
+                        surface: "#E4E9F0",
+                        "on-surface": "#1F2733",
+                        "surface-variant": "#DCE2EA",
+                        "on-surface-variant": "#48505C",
+                        outline: "#B9C2D0",
+                        "outline-variant": "#DBE1EA",
+                        "surface-container-lowest": "#EDF1F6",
+                        "surface-container-low": "#DDE3EC",
+                        "surface-container": "#D8DFE9",
+                        "surface-container-high": "#CBD3E0",
+                        "surface-container-highest": "#C0C9D8",
+                        "surface-tint": "#0F6CBD",
+                    },
+                    fontFamily: {
+                        "title-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "data-mono": ["'JetBrains Mono'", "monospace"],
+                        "body-sm": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "label-caps": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "body-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "display-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "headline-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+
+<body>
+    <!-- Main Dashboard Canvas -->
+    <main class="fs-page-in p-6 lg:p-8 pb-20">
+        <div class="max-w-[1440px] mx-auto space-y-6">
+            <!-- Page Header -->
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <h2 class="font-headline-lg text-[26px] font-bold text-on-background tracking-tight">Overview Dashboard</h2>
+                    <p class="font-body-md text-[13.5px] text-on-surface-variant mt-1">Real-time inventory intelligence, demand forecasting, and stockout risk monitoring.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="refresh-dashboard-btn" class="h-9 px-3.5 bg-surface border border-outline-variant text-on-surface text-[12.5px] font-semibold rounded-md hover:bg-surface-container transition-colors flex items-center gap-1.5 shadow-sm">
+                        <span class="material-symbols-outlined text-[16px] text-primary">sync</span>
+                        <span>Refresh Data</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Bento Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- KPI 1: Total Products -->
+                <div class="fs-kpi-card bg-surface border border-outline-variant rounded-xl p-5 card-hover shadow-sm" style="--fs-kpi-accent:#0F6CBD">
+                    <div class="flex justify-between items-start mb-3">
+                        <p class="font-label-caps text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Total Products</p>
+                        <span class="fs-kpi-icon-chip bg-primary/10 text-primary">
+                            <span class="material-symbols-outlined text-[20px]">category</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-display-lg text-[30px] font-bold text-on-background leading-none" id="kpi-total-products"><span class="fs-skeleton inline-block h-7 w-16 rounded"></span></div>
+                    <div class="mt-2 text-[11.5px] text-on-surface-variant">Monitored across 5 warehouses</div>
+                </div>
+
+                <!-- KPI 2: Total Inventory -->
+                <div class="fs-kpi-card bg-surface border border-outline-variant rounded-xl p-5 card-hover shadow-sm relative overflow-hidden" style="--fs-kpi-accent:#038387">
+                    <div class="flex justify-between items-start mb-3">
+                        <p class="font-label-caps text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Total Inventory</p>
+                        <span class="fs-kpi-icon-chip bg-secondary/10 text-secondary">
+                            <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-display-lg text-[30px] font-bold text-on-background leading-none" id="kpi-total-inventory"><span class="fs-skeleton inline-block h-7 w-20 rounded"></span></div>
+                    <div class="mt-2 text-[11.5px] text-on-surface-variant">Average units on-hand</div>
+                </div>
+
+                <!-- KPI 3: Units Sold -->
+                <div class="fs-kpi-card bg-surface border border-outline-variant rounded-xl p-5 card-hover shadow-sm" style="--fs-kpi-accent:#115EA3">
+                    <div class="flex justify-between items-start mb-3">
+                        <p class="font-label-caps text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Units Sold</p>
+                        <span class="fs-kpi-icon-chip bg-primary-container/10 text-primary-container">
+                            <span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-display-lg text-[30px] font-bold text-on-background leading-none" id="kpi-units-sold"><span class="fs-skeleton inline-block h-7 w-20 rounded"></span></div>
+                    <div class="mt-2 text-[11.5px] text-on-surface-variant">Historical daily sales total</div>
+                </div>
+
+                <!-- KPI 4: Low Stock Products -->
+                <div class="fs-kpi-card bg-surface border border-outline-variant rounded-xl p-5 card-hover shadow-sm" style="--fs-kpi-accent:#D13438">
+                    <div class="flex justify-between items-start mb-3">
+                        <p class="font-label-caps text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Low Stock Products</p>
+                        <span class="fs-kpi-icon-chip bg-error/10 text-error">
+                            <span class="material-symbols-outlined text-[20px]">warning</span>
+                        </span>
+                    </div>
+                    <div class="fs-kpi-value font-display-lg text-[30px] font-bold text-error leading-none" id="kpi-low-stock"><span class="fs-skeleton inline-block h-7 w-10 rounded"></span></div>
+                    <div class="mt-2 text-[11.5px] text-on-surface-variant">Below reorder threshold</div>
+                </div>
+            </div>
+
+            <!-- Health & Forecast Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Inventory Health Breakdown -->
+                <div class="bg-surface border border-outline-variant rounded-xl p-5 shadow-sm">
+                    <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[18px]">health_and_safety</span>
+                        Inventory Health Status
+                    </h3>
+                    <div class="flex items-center gap-2 text-center" id="health-breakdown">
+                        <div class="p-3 bg-green-50 rounded-lg border border-green-200 flex-1">
+                            <p class="text-[10.5px] font-semibold text-green-700 uppercase tracking-wide">Healthy</p>
+                            <p class="text-xl font-bold text-green-800 mt-1" id="health-healthy">--</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 flex-1">
+                            <p class="text-[10.5px] font-semibold text-amber-700 uppercase tracking-wide">Warning</p>
+                            <p class="text-xl font-bold text-amber-800 mt-1" id="health-warning">--</p>
+                        </div>
+                        <div class="p-3 bg-red-50 rounded-lg border border-red-200 flex-1">
+                            <p class="text-[10.5px] font-semibold text-red-700 uppercase tracking-wide">Critical</p>
+                            <p class="text-xl font-bold text-red-800 mt-1" id="health-critical">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forecast Summary -->
+                <div class="bg-surface border border-outline-variant rounded-xl p-5 shadow-sm">
+                    <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">trending_up</span>
+                        Demand Forecast Summary
+                    </h3>
+                    <div class="space-y-2.5">
+                        <div class="flex justify-between items-center text-[13px] border-b border-outline-variant/60 pb-2">
+                            <span class="text-on-surface-variant">Winning Model</span>
+                            <span class="font-bold text-primary" id="forecast-model-name">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[13px] border-b border-outline-variant/60 pb-2">
+                            <span class="text-on-surface-variant">Next 30-Day Demand</span>
+                            <span class="font-bold text-on-surface" id="forecast-30d-total">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[13px]">
+                            <span class="text-on-surface-variant">Avg Daily Demand</span>
+                            <span class="font-bold text-on-surface" id="forecast-daily-avg">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stockout Risk Summary -->
+                <div class="bg-surface border border-outline-variant rounded-xl p-5 shadow-sm">
+                    <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-error text-[18px]">gavel</span>
+                        Inventory Risk Summary
+                    </h3>
+                    <div class="flex items-center gap-2 text-center">
+                        <div class="p-3 bg-red-50 rounded-lg border border-red-200 flex-1">
+                            <p class="text-[10.5px] font-semibold text-red-700 uppercase tracking-wide">High</p>
+                            <p class="text-xl font-bold text-red-800 mt-1" id="risk-high">--</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 flex-1">
+                            <p class="text-[10.5px] font-semibold text-amber-700 uppercase tracking-wide">Medium</p>
+                            <p class="text-xl font-bold text-amber-800 mt-1" id="risk-medium">--</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg border border-blue-200 flex-1">
+                            <p class="text-[10.5px] font-semibold text-blue-700 uppercase tracking-wide">Low</p>
+                            <p class="text-xl font-bold text-blue-800 mt-1" id="risk-low">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Business Insights Banner -->
+            <div class="bg-surface border border-outline-variant rounded-xl p-5 relative overflow-hidden shadow-sm">
+                <div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+                <div class="flex items-center justify-between mb-3 pl-3">
+                    <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[18px]">auto_awesome</span>
+                        AI Executive Insights
+                    </h3>
+                    <button id="refresh-insights-btn" class="p-1.5 text-on-surface-variant hover:text-primary rounded-md hover:bg-surface-container transition-colors" title="Refresh Insights">
+                        <span class="material-symbols-outlined text-[18px]">refresh</span>
+                    </button>
+                </div>
+                <div id="ai-insights-content" class="pl-3 text-on-surface text-[13.5px] leading-relaxed">
+                    <p class="text-on-surface-variant flex items-center gap-2">
+                        <span class="material-symbols-outlined animate-spin text-primary text-[16px]">progress_activity</span>
+                        Analyzing system inventory metrics...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Charts Section Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Demand & Sales Trend Chart (Spans 2 cols) -->
+                <div class="lg:col-span-2 bg-surface border border-outline-variant rounded-xl p-5 flex flex-col min-h-[400px] shadow-sm">
+                    <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface">Historical Sales &amp; Forecast Trend</h3>
+                            <p class="text-[11px] text-on-surface-variant mt-0.5" id="chart-period-caption">Dataset period &middot; Forecast continues 30 days beyond dataset end</p>
+                        </div>
+                        <div class="flex items-center gap-4 text-[11.5px] font-medium">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-slate-400"></span> <span id="legend-history-label">Sales History</span></span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-primary"></span> <span id="legend-forecast-label">AI Forecast (next 30 days)</span></span>
+                        </div>
+                    </div>
+                    <div class="flex-1 w-full relative min-h-[300px]">
+                        <canvas id="demand-chart" role="img" aria-label="Line chart of daily units sold over the last 90 days"></canvas>
+                    </div>
+                </div>
+
+                <!-- Supplier & Store Distribution Charts (1 col) -->
+                <div class="bg-surface border border-outline-variant rounded-xl p-5 flex flex-col gap-5 shadow-sm min-h-[400px]">
+                    <div>
+                        <h3 class="font-title-md text-[13.5px] font-semibold text-on-surface mb-2">Supplier Distribution</h3>
+                        <div class="h-40 relative">
+                            <canvas id="category-chart" role="img" aria-label="Donut chart of inventory distribution by product category"></canvas>
+                        </div>
+                    </div>
+                    <div class="border-t border-outline-variant pt-4">
+                        <h3 class="font-title-md text-[13.5px] font-semibold text-on-surface mb-2">Store Risk Distribution</h3>
+                        <div class="h-36 relative">
+                            <canvas id="store-chart" role="img" aria-label="Bar chart of inventory risk distribution by warehouse"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initLayout } from '/components.js';
+        import { fetchDashboard, formatNumber, askCopilot, showToast, animateNumber } from '/api.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLayout("Search dashboard...");
+            loadDashboard();
+            loadAIInsights();
+
+            document.getElementById('refresh-dashboard-btn').addEventListener('click', async () => {
+                const btn = document.getElementById('refresh-dashboard-btn');
+                btn.disabled = true;
+                btn.classList.add('opacity-60');
+                showToast("Refreshing dashboard data...", "info");
+                await Promise.all([loadDashboard(true), loadAIInsights()]);
+                showToast("Dashboard updated.", "success");
+                btn.disabled = false;
+                btn.classList.remove('opacity-60');
+            });
+
+            document.getElementById('refresh-insights-btn').addEventListener('click', loadAIInsights);
+        });
+
+        let demandChart = null;
+        let categoryChart = null;
+        let storeChart = null;
+
+        // Chart.js palette matching the Fluent/Power BI-inspired theme
+        const CHART_COLORS = ['#0F6CBD', '#038387', '#8764B8', '#B65C02', '#D13438'];
+
+        async function loadDashboard(forceRefresh = false) {
+            try {
+                const data = await fetchDashboard(forceRefresh);
+                updateKPIs(data);
+                renderDemandChart(data);
+                renderCategoryChart(data.category_distribution || []);
+                renderStoreChart(data.region_distribution || []);
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+
+        async function loadAIInsights() {
+            const contentDiv = document.getElementById('ai-insights-content');
+            contentDiv.innerHTML = `
+                <p class="text-on-surface-variant flex items-center gap-2">
+                    <span class="material-symbols-outlined animate-spin text-primary text-[16px]">progress_activity</span>
+                    Generating intelligent recommendations...
+                </p>
+            `;
+            try {
+                const response = await askCopilot("Based on current system data, give exactly 3 concise bullet recommendations (one for Demand Forecast, one for Inventory Health, one for Stockout Risk). Format cleanly in HTML <ul><li> structure without markdown formatting.");
+                const replyText = response.reply || response.content || "<ul><li>Review stockout risk alerts across monitored stores.</li></ul>";
+                const cleanHtml = replyText.replace(/```html/g, '').replace(/```/g, '').trim();
+                // DOMPurify sanitizes the AI-generated HTML before injection - the
+                // reply text ultimately originates from an LLM (Groq) and should
+                // never be trusted as safe markup outright.
+                // whitespace-pre-line preserves \n as line breaks for the plain-text
+                // fallback reply, while still letting real <ul><li> markup from the
+                // AI render normally (tags are unaffected by this CSS property).
+                const safeHtml = window.DOMPurify ? DOMPurify.sanitize(cleanHtml) : cleanHtml;
+                contentDiv.innerHTML = `<div class="fs-markdown whitespace-pre-line">${safeHtml}</div>`;
+            } catch (error) {
+                contentDiv.innerHTML = `<p class="text-error flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">error</span> System insights unavailable at this moment.</p>`;
+            }
+        }
+
+        function updateKPIs(data) {
+            animateNumber(document.getElementById('kpi-total-products'), data.total_products);
+            animateNumber(document.getElementById('kpi-total-inventory'), data.total_inventory);
+            animateNumber(document.getElementById('kpi-units-sold'), data.units_sold);
+            animateNumber(document.getElementById('kpi-low-stock'), data.low_stock_products);
+
+            if (data.inventory_health) {
+                document.getElementById('health-healthy').textContent = data.inventory_health.healthy || 0;
+                document.getElementById('health-warning').textContent = data.inventory_health.warning || 0;
+                document.getElementById('health-critical').textContent = data.inventory_health.critical || 0;
+            }
+
+            if (data.forecast_summary) {
+                document.getElementById('forecast-model-name').textContent = data.forecast_summary.winning_model || "Linear Regression";
+                animateNumber(document.getElementById('forecast-30d-total'), data.forecast_summary.total_predicted_demand, { formatFn: v => formatNumber(Math.round(v)) + " units" });
+                animateNumber(document.getElementById('forecast-daily-avg'), data.forecast_summary.avg_daily_demand, { formatFn: v => formatNumber(Math.round(v)) + " / day" });
+            }
+
+            if (data.inventory_risk_summary) {
+                animateNumber(document.getElementById('risk-high'), data.inventory_risk_summary.High || 0);
+                animateNumber(document.getElementById('risk-medium'), data.inventory_risk_summary.Medium || 0);
+                animateNumber(document.getElementById('risk-low'), data.inventory_risk_summary.Low || 0);
+            }
+        }
+
+        function renderDemandChart(data) {
+            const canvas = document.getElementById('demand-chart');
+            if (!canvas) return;
+            if (demandChart) demandChart.destroy();
+
+            const sales = data.sales_history || [];
+            const forecast = data.forecast_preview || [];
+
+            const salesLabels = sales.map(s => s.date);
+            const fcstLabels = forecast.map(f => f.date);
+            const allLabels = [...salesLabels, ...fcstLabels];
+
+            const captionEl = document.getElementById('chart-period-caption');
+            const historyLabelEl = document.getElementById('legend-history-label');
+            const forecastLabelEl = document.getElementById('legend-forecast-label');
+            if (salesLabels.length && fcstLabels.length) {
+                const historyStartYear = salesLabels[0].slice(0, 4);
+                const historyEndYear = salesLabels[salesLabels.length - 1].slice(0, 4);
+                const historyYearRange = historyStartYear === historyEndYear ? historyStartYear : `${historyStartYear}\u2013${historyEndYear}`;
+                if (captionEl) {
+                    captionEl.textContent = `Historical Sales (${historyYearRange}): ${salesLabels[0]} to ${salesLabels[salesLabels.length - 1]}  ·  30-Day Forecast: ${fcstLabels[0]} to ${fcstLabels[fcstLabels.length - 1]}`;
+                }
+                if (historyLabelEl) historyLabelEl.textContent = `Historical Sales (${historyYearRange})`;
+                if (forecastLabelEl) forecastLabelEl.textContent = `30-Day Forecast (from ${fcstLabels[0]})`;
+            }
+
+            const salesData = [...sales.map(s => s.total_units_sold), ...forecast.map(() => null)];
+            // Bridge point: repeat the last historical value as the anchor for
+            // the forecast dataset so the two line segments join with no gap.
+            // The forecast values plotted here are exactly what the model
+            // predicted (see /api/dashboard -> forecast_preview) - no
+            // synthetic variation is applied. The line isn't perfectly
+            // straight because the underlying features (day-of-week,
+            // is_weekend, lag/rolling demand) genuinely vary day to day.
+            const lastActual = sales.length ? sales[sales.length - 1].total_units_sold : null;
+            const fcstData = [
+                ...sales.map((_, i) => (i === sales.length - 1 ? lastActual : null)),
+                ...forecast.map(f => f.predicted_demand)
+            ];
+
+            demandChart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: [
+                        {
+                            label: 'Historical Units Sold',
+                            data: salesData,
+                            borderColor: '#94a3b8',
+                            backgroundColor: 'rgba(148, 163, 184, 0.08)',
+                            borderWidth: 2,
+                            pointRadius: 1,
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'Predicted Demand',
+                            data: fcstData,
+                            borderColor: '#0F6CBD',
+                            backgroundColor: 'rgba(15, 108, 189, 0.1)',
+                            borderWidth: 2.5,
+                            borderDash: [5, 4],
+                            pointRadius: 2,
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 10, font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 10 } }, grid: { color: '#EDEBE9' } }
+                    }
+                }
+            });
+        }
+
+        function topCategoriesWithOther(categories, maxSlices = 3) {
+            const sorted = [...categories].sort((a, b) => b.total - a.total);
+            if (sorted.length <= maxSlices) return sorted;
+            const top = sorted.slice(0, maxSlices - 1);
+            const otherTotal = sorted.slice(maxSlices - 1).reduce((sum, c) => sum + c.total, 0);
+            return [...top, { category: 'Other', total: otherTotal }];
+        }
+
+        function renderCategoryChart(categories) {
+            const canvas = document.getElementById('category-chart');
+            if (!canvas) return;
+            if (categoryChart) categoryChart.destroy();
+
+            const grouped = topCategoriesWithOther(categories, 3);
+            const labels = grouped.map(c => c.category);
+            const counts = grouped.map(c => c.total);
+
+            categoryChart = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: CHART_COLORS,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } } },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function renderStoreChart(stores) {
+            const canvas = document.getElementById('store-chart');
+            if (!canvas) return;
+            if (storeChart) storeChart.destroy();
+
+            const labels = stores.map(s => s.region);
+            const counts = stores.map(s => s.total);
+
+            storeChart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Monitored Pairs',
+                        data: counts,
+                        backgroundColor: '#038387',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { ticks: { precision: 0 } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

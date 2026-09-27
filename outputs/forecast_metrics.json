@@ -1,0 +1,15 @@
+{
+  "model": "Random Forest",
+  "rmse": 131.29,
+  "mae": 99.51,
+  "mape": 3.2,
+  "r2": 0.35,
+  "prediction_interval": {
+    "confidence_level": 0.95,
+    "z_score": 1.96,
+    "residual_std": 127.58,
+    "margin": 250.05,
+    "n_test_samples": 184,
+    "method": "Empirical residual-based prediction interval: margin = Z(0.95) * std(actual - predicted) computed on the winning model's held-out test set."
+  }
+}

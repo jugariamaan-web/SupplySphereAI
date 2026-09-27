@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SupplySphere AI - Inventory Risk</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+    <link href="/theme.css" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0F6CBD",
+                        "primary-container": "#115EA3",
+                        "on-primary": "#ffffff",
+                        secondary: "#038387",
+                        "secondary-container": "#0B6A75",
+                        "on-secondary": "#ffffff",
+                        error: "#D13438",
+                        "error-container": "#FDE7E9",
+                        "on-error": "#ffffff",
+                        background: "#E4E9F0",
+                        "on-background": "#1F2733",
+                        surface: "#E4E9F0",
+                        "on-surface": "#1F2733",
+                        "surface-variant": "#DCE2EA",
+                        "on-surface-variant": "#48505C",
+                        outline: "#B9C2D0",
+                        "outline-variant": "#DBE1EA",
+                        "surface-container-lowest": "#EDF1F6",
+                        "surface-container-low": "#DDE3EC",
+                        "surface-container": "#D8DFE9",
+                        "surface-container-high": "#CBD3E0",
+                    },
+                    fontFamily: {
+                        "title-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "data-mono": ["'JetBrains Mono'", "monospace"],
+                        "body-sm": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "label-caps": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "body-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "display-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "headline-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden">
+    <!-- Main Content Area -->
+    <main class="fs-page-in p-6 lg:p-8 max-w-[1440px] w-full mx-auto pb-20">
+        <!-- Page Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-5 gap-4">
+            <div>
+                <h2 class="font-headline-lg text-[26px] font-bold text-on-surface tracking-tight mb-1">Inventory Risk Monitor</h2>
+                <p class="font-body-md text-[13.5px] text-on-surface-variant">XGBoost-powered classification of product-store pairs at risk of inventory stockouts.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Search Input -->
+                <div class="relative w-60">
+                    <span aria-hidden="true" class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[16px]">search</span>
+                    <input id="supplier-search" type="text" aria-label="Search by product or store" placeholder="Search Product, Store..." class="w-full pl-8 pr-3 py-2 bg-surface border border-outline-variant rounded-md text-[12px] font-medium focus:ring-primary focus:border-primary" />
+                </div>
+                <!-- Risk Level Filter -->
+                <select id="risk-level-filter" aria-label="Filter by risk level" class="h-9 px-3 bg-surface border border-outline-variant rounded-md text-[12px] font-medium focus:ring-primary focus:border-primary">
+                    <option value="ALL">All Risk Levels</option>
+                    <option value="High">High Risk Only</option>
+                    <option value="Medium">Medium Risk Only</option>
+                    <option value="Low">Low Risk Only</option>
+                </select>
+                <!-- Supplier Filter -->
+                <select id="risk-category-filter" aria-label="Filter by supplier" class="h-9 px-3 bg-surface border border-outline-variant rounded-md text-[12px] font-medium focus:ring-primary focus:border-primary">
+                    <option value="ALL">All Suppliers</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Compact KPI Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-4 flex items-center gap-3.5 shadow-sm card-hover" style="--fs-kpi-accent:#D13438">
+                <div class="fs-kpi-icon-chip bg-red-50 text-red-700">
+                    <span class="material-symbols-outlined text-[20px]">warning</span>
+                </div>
+                <div>
+                    <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">High Risk Pairs</p>
+                    <p class="fs-kpi-value text-xl font-bold text-red-700 mt-0.5" id="kpi-high-count">--</p>
+                </div>
+            </div>
+            <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-4 flex items-center gap-3.5 shadow-sm card-hover" style="--fs-kpi-accent:#B45309">
+                <div class="fs-kpi-icon-chip bg-amber-50 text-amber-700">
+                    <span class="material-symbols-outlined text-[20px]">error_outline</span>
+                </div>
+                <div>
+                    <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">Medium Risk Pairs</p>
+                    <p class="fs-kpi-value text-xl font-bold text-amber-700 mt-0.5" id="kpi-medium-count">--</p>
+                </div>
+            </div>
+            <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-4 flex items-center gap-3.5 shadow-sm card-hover" style="--fs-kpi-accent:#1D4ED8">
+                <div class="fs-kpi-icon-chip bg-blue-50 text-blue-700">
+                    <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                </div>
+                <div>
+                    <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">Low Risk Pairs</p>
+                    <p class="fs-kpi-value text-xl font-bold text-blue-700 mt-0.5" id="kpi-low-count">--</p>
+                </div>
+            </div>
+            <div class="fs-kpi-card bg-surface rounded-xl border border-outline-variant p-4 flex items-center gap-3.5 shadow-sm card-hover" style="--fs-kpi-accent:#0F6CBD">
+                <div class="fs-kpi-icon-chip bg-primary/10 text-primary">
+                    <span class="material-symbols-outlined text-[20px]">psychology</span>
+                </div>
+                <div>
+                    <p class="text-[10.5px] font-semibold text-on-surface-variant uppercase tracking-wide">Avg Confidence</p>
+                    <p class="fs-kpi-value text-xl font-bold text-primary mt-0.5" id="kpi-avg-conf">--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Risk Table Card -->
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+                <h3 class="font-title-md text-[14.5px] font-semibold text-on-surface">Product-Store Risk Register</h3>
+                <span class="text-[11.5px] text-on-surface-variant font-medium" id="table-showing-count">Showing 0 records</span>
+            </div>
+
+            <div class="overflow-x-auto max-h-[520px]">
+                <table class="w-full text-left text-[13px] border-collapse">
+                    <thead class="sticky top-0 bg-surface-container-low border-b border-outline-variant z-10 text-[10.5px] uppercase text-on-surface-variant font-semibold">
+                        <tr>
+                            <th class="py-3 px-4">Product</th>
+                            <th class="py-3 px-4">Store ID</th>
+                            <th class="py-3 px-4">Supplier</th>
+                            <th class="py-3 px-4 text-right">Risk Score</th>
+                            <th class="py-3 px-4 text-center">Risk Level</th>
+                            <th class="py-3 px-4 text-right">Confidence</th>
+                            <th class="py-3 px-4">Suggested Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supplier-table-body" class="divide-y divide-outline-variant/60">
+                        <tr class="fs-skel-row"><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4 text-center"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-32 rounded"></span></td></tr>
+                        <tr class="fs-skel-row"><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4 text-center"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-28 rounded"></span></td></tr>
+                        <tr class="fs-skel-row"><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4 text-center"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-36 rounded"></span></td></tr>
+                        <tr class="fs-skel-row"><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4 text-center"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-28 rounded"></span></td></tr>
+                        <tr class="fs-skel-row"><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-24 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-20 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4 text-center"><span class="fs-skeleton inline-block h-3.5 w-14 rounded"></span></td><td class="py-2.5 px-4 text-right"><span class="fs-skeleton inline-block h-3.5 w-10 rounded"></span></td><td class="py-2.5 px-4"><span class="fs-skeleton inline-block h-3.5 w-32 rounded"></span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Footer -->
+            <div class="p-3.5 border-t border-outline-variant flex items-center justify-between bg-surface-container-low text-[12px] font-medium">
+                <div class="px-2.5 py-1 bg-surface border border-outline-variant rounded-full text-on-surface-variant">
+                    Page <span id="page-num-display" class="font-bold text-on-surface">1</span> of <span id="page-total-display">1</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="prev-page-btn" class="h-8 px-3 bg-surface border border-outline-variant rounded-md hover:bg-surface-container-high hover:border-primary/40 disabled:opacity-40 disabled:hover:bg-surface disabled:hover:border-outline-variant disabled:cursor-not-allowed transition-all flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px]">chevron_left</span> Previous
+                    </button>
+                    <button id="next-page-btn" class="h-8 px-3 bg-surface border border-outline-variant rounded-md hover:bg-surface-container-high hover:border-primary/40 disabled:opacity-40 disabled:hover:bg-surface disabled:hover:border-outline-variant disabled:cursor-not-allowed transition-all flex items-center gap-1">
+                        Next <span class="material-symbols-outlined text-[15px]">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initLayout } from '/components.js';
+        import { fetchAllRisk, fetchProducts, riskLevelBadgeClass } from '/api.js';
+
+        let allRiskRecords = [];
+        let filteredRecords = [];
+        let currentPage = 1;
+        const PAGE_SIZE = 10;
+        let productNameById = {};
+
+        // Builds { SKU_xx: "Wireless Mouse" } from the same /api/products
+        // endpoint the Inventory Plan page uses, so risk rows can show the
+        // friendly product name next to the raw ID without a backend change.
+        async function loadProductNames() {
+            try {
+                const data = await fetchProducts();
+                productNameById = Object.fromEntries((data.products || []).map(p => [p.product_id, p.product_name]));
+            } catch (e) {
+                console.error('Failed to load product names', e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLayout("Search risk register...");
+            loadRiskData();
+
+            document.getElementById('supplier-search').addEventListener('input', applyFilters);
+            document.getElementById('risk-level-filter').addEventListener('change', applyFilters);
+            document.getElementById('risk-category-filter').addEventListener('change', applyFilters);
+
+            document.getElementById('prev-page-btn').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTablePage();
+                }
+            });
+
+            document.getElementById('next-page-btn').addEventListener('click', () => {
+                const totalPages = Math.ceil(filteredRecords.length / PAGE_SIZE) || 1;
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTablePage();
+                }
+            });
+        });
+
+        async function loadRiskData() {
+            try {
+                const [data] = await Promise.all([fetchAllRisk(), loadProductNames()]);
+                allRiskRecords = data.inventory_risk || [];
+                populateCategoryFilter(allRiskRecords);
+                updateKPIs(allRiskRecords);
+                applyFilters();
+            } catch (error) {
+                console.error('Failed to load risk records:', error);
+            }
+        }
+
+        function updateKPIs(records) {
+            const high = records.filter(r => r.risk_level === 'High').length;
+            const medium = records.filter(r => r.risk_level === 'Medium').length;
+            const low = records.filter(r => r.risk_level === 'Low').length;
+            const avgConf = records.length > 0 ? (records.reduce((sum, r) => sum + r.confidence, 0) / records.length) * 100 : 0;
+
+            document.getElementById('kpi-high-count').textContent = high;
+            document.getElementById('kpi-medium-count').textContent = medium;
+            document.getElementById('kpi-low-count').textContent = low;
+            document.getElementById('kpi-avg-conf').textContent = avgConf.toFixed(1) + '%';
+        }
+
+        function populateCategoryFilter(records) {
+            const categories = [...new Set(records.map(r => r.category))].sort();
+            const select = document.getElementById('risk-category-filter');
+            select.innerHTML = '<option value="ALL">All Suppliers</option>';
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            const searchQuery = (document.getElementById('supplier-search').value || '').toLowerCase().trim();
+            const levelFilter = document.getElementById('risk-level-filter').value;
+            const catFilter = document.getElementById('risk-category-filter').value;
+
+            filteredRecords = allRiskRecords.filter(r => {
+                const productName = (productNameById[r.product_id] || '').toLowerCase();
+                const matchSearch = !searchQuery ||
+                                    r.product_id.toLowerCase().includes(searchQuery) ||
+                                    productName.includes(searchQuery) ||
+                                    r.store_id.toLowerCase().includes(searchQuery) ||
+                                    r.category.toLowerCase().includes(searchQuery);
+
+                const matchLevel = levelFilter === 'ALL' || r.risk_level === levelFilter;
+                const matchCat = catFilter === 'ALL' || r.category === catFilter;
+
+                return matchSearch && matchLevel && matchCat;
+            });
+
+            currentPage = 1;
+            renderTablePage();
+        }
+
+        function renderTablePage() {
+            const tbody = document.getElementById('supplier-table-body');
+            const totalRecords = filteredRecords.length;
+            const totalPages = Math.ceil(totalRecords / PAGE_SIZE) || 1;
+
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            document.getElementById('page-num-display').textContent = currentPage;
+            document.getElementById('page-total-display').textContent = totalPages;
+            document.getElementById('table-showing-count').textContent = `Showing ${totalRecords} records`;
+
+            document.getElementById('prev-page-btn').disabled = (currentPage === 1);
+            document.getElementById('next-page-btn').disabled = (currentPage === totalPages);
+
+            if (totalRecords === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant">No matching risk records found.</td></tr>';
+                return;
+            }
+
+            const startIdx = (currentPage - 1) * PAGE_SIZE;
+            const pageRecords = filteredRecords.slice(startIdx, startIdx + PAGE_SIZE);
+
+            tbody.innerHTML = pageRecords.map(r => {
+                const badgeClass = riskLevelBadgeClass(r.risk_level);
+
+                const productName = productNameById[r.product_id];
+
+                return `
+                    <tr class="hover:bg-surface-container-low transition-colors cursor-pointer" data-pid="${r.product_id}" data-sid="${r.store_id}">
+                        <td class="py-2.5 px-4">
+                            ${productName ? `<div class="font-medium text-on-surface leading-tight">${productName}</div>` : ''}
+                            <div class="font-data-mono font-bold text-primary text-[11.5px] leading-tight">${r.product_id}</div>
+                        </td>
+                        <td class="py-2.5 px-4 font-data-mono text-on-surface">${r.store_id}</td>
+                        <td class="py-2.5 px-4 text-on-surface-variant">${r.category}</td>
+                        <td class="py-2.5 px-4 text-right font-data-mono font-semibold text-on-surface">${r.risk_score.toFixed(4)}</td>
+                        <td class="py-2.5 px-4 text-center">
+                            <span class="fs-badge ${badgeClass}">${r.risk_level}</span>
+                        </td>
+                        <td class="py-2.5 px-4 text-right font-data-mono text-on-surface">${(r.confidence * 100).toFixed(1)}%</td>
+                        <td class="py-2.5 px-4 text-[11.5px] text-on-surface-variant max-w-xs truncate">${r.suggested_action}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Attach modal popup on row click
+            tbody.querySelectorAll('tr[data-pid]').forEach(row => {
+                row.addEventListener('click', () => {
+                    const pid = row.dataset.pid;
+                    const sid = row.dataset.sid;
+                    const record = allRiskRecords.find(r => r.product_id === pid && r.store_id === sid);
+                    if (record) showRiskDetailModal(record);
+                });
+            });
+        }
+
+        function showRiskDetailModal(record) {
+            let factorsHtml = '<p class="text-[11.5px] text-on-surface-variant">No factor details available.</p>';
+            if (record.top_risk_factors && record.top_risk_factors.length > 0) {
+                factorsHtml = record.top_risk_factors.map(f => `
+                    <div class="flex justify-between py-1.5 border-b border-outline-variant/60 text-[12px]">
+                        <span class="text-on-surface font-medium">${f.feature}</span>
+                        <span class="font-data-mono text-primary font-bold">${f.value}</span>
+                    </div>
+                `).join('');
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="bg-surface rounded-xl w-full max-w-lg shadow-lg border border-outline-variant overflow-hidden">
+                    <div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+                        <div>
+                            <h3 class="text-[15px] font-bold text-on-surface">${productNameById[record.product_id] ? `${productNameById[record.product_id]} (${record.product_id})` : record.product_id} at Store ${record.store_id}</h3>
+                            <p class="text-[11.5px] text-on-surface-variant">Supplier: ${record.category}</p>
+                        </div>
+                        <button id="close-modal-btn" class="p-1.5 text-on-surface-variant hover:text-primary rounded-md hover:bg-surface-container">
+                            <span class="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4 text-[13px]">
+                        <div class="grid grid-cols-3 gap-2.5 text-center">
+                            <div class="p-2.5 bg-surface-container-low rounded-lg border border-outline-variant">
+                                <p class="text-[11px] text-on-surface-variant">Risk Level</p>
+                                <p class="text-[14px] font-bold mt-1 text-on-surface">${record.risk_level}</p>
+                            </div>
+                            <div class="p-2.5 bg-surface-container-low rounded-lg border border-outline-variant">
+                                <p class="text-[11px] text-on-surface-variant">Risk Score</p>
+                                <p class="text-[14px] font-bold mt-1 text-primary">${record.risk_score.toFixed(4)}</p>
+                            </div>
+                            <div class="p-2.5 bg-surface-container-low rounded-lg border border-outline-variant">
+                                <p class="text-[11px] text-on-surface-variant">Confidence</p>
+                                <p class="text-[14px] font-bold mt-1 text-on-surface">${(record.confidence * 100).toFixed(1)}%</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="text-[10.5px] font-semibold text-on-surface-variant uppercase mb-1">Suggested Action</h4>
+                            <p class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-[12px] text-blue-900 leading-relaxed font-medium">${record.suggested_action}</p>
+                        </div>
+
+                        <div>
+                            <h4 class="text-[10.5px] font-semibold text-on-surface-variant uppercase mb-2">Top Driving Risk Factors</h4>
+                            <div class="bg-surface-container-low p-3 rounded-lg border border-outline-variant">
+                                ${factorsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            modal.querySelector('#close-modal-btn').addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SupplySphere AI - SupplySphere Intelligence</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="/theme.css" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0F6CBD",
+                        "primary-container": "#115EA3",
+                        "on-primary": "#ffffff",
+                        secondary: "#038387",
+                        "on-secondary": "#ffffff",
+                        error: "#D13438",
+                        background: "#E4E9F0",
+                        "on-background": "#1F2733",
+                        surface: "#E4E9F0",
+                        "on-surface": "#1F2733",
+                        "surface-variant": "#DCE2EA",
+                        "on-surface-variant": "#48505C",
+                        outline: "#B9C2D0",
+                        "outline-variant": "#DBE1EA",
+                        "surface-container-lowest": "#EDF1F6",
+                        "surface-container-low": "#DDE3EC",
+                        "surface-container": "#D8DFE9",
+                        "surface-container-high": "#CBD3E0",
+                    },
+                    fontFamily: {
+                        "title-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "data-mono": ["'JetBrains Mono'", "monospace"],
+                        "body-sm": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "label-caps": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "body-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "headline-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-background">
+    <!-- Chat Interface Canvas -->
+    <main class="fs-page-in flex flex-col h-screen">
+        <div class="max-w-4xl w-full mx-auto flex flex-col flex-1 min-h-0 px-4 lg:px-0">
+            <!-- Chat Header -->
+            <div class="py-5 border-b border-outline-variant flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary shrink-0">
+                        <span class="material-symbols-outlined text-[22px]">auto_awesome</span>
+                    </div>
+                    <div>
+                        <h2 class="font-headline-lg text-[19px] font-bold text-on-surface leading-tight">SupplySphere Intelligence</h2>
+                        <span id="engine-status-badge" class="flex items-center gap-1.5 text-[11.5px] font-medium text-on-surface-variant">
+                            <span class="w-2 h-2 rounded-full bg-slate-300"></span> Checking AI engine status&hellip;
+                        </span>
+                    </div>
+                </div>
+                <button id="clear-chat-btn" title="Clear conversation" class="h-9 px-3.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-on-surface-variant hover:text-error hover:bg-red-50 rounded-md border border-outline-variant transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+                    Clear Chat
+                </button>
+            </div>
+
+            <!-- Chat Messages Area -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto py-6 space-y-5 min-h-0">
+                <!-- Welcome Message (JS re-inserts this if history is empty) -->
+                <div class="flex items-start gap-3" data-role="welcome">
+                    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary shrink-0 mt-0.5">
+                        <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                    </div>
+                    <div class="bg-surface border border-outline-variant rounded-xl rounded-tl-sm p-4 max-w-[85%] shadow-sm">
+                        <p class="text-[13.5px] text-on-surface leading-relaxed">
+                            I am SupplySphere Intelligence. Ask me to analyze stockout risks, forecast demand trends, or generate replenishment recommendations based on live system data.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div id="typing-indicator" class="hidden items-center gap-3 pb-4 shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary shrink-0">
+                    <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                </div>
+                <div class="bg-surface border border-outline-variant rounded-xl rounded-tl-sm px-4 py-3 flex items-center gap-2.5 shadow-sm">
+                    <div class="flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary fs-typing-dot" style="animation-delay: 0ms"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary fs-typing-dot" style="animation-delay: 150ms"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary fs-typing-dot" style="animation-delay: 300ms"></span>
+                    </div>
+                    <span class="font-body-sm text-xs text-on-surface-variant">SupplySphere Intelligence is analyzing supply data&hellip;</span>
+                </div>
+            </div>
+
+            <!-- Quick Prompt Suggestions -->
+            <div id="quick-prompts" class="flex flex-wrap gap-2 pb-4 shrink-0">
+                <button class="quick-prompt-btn px-3.5 py-1.5 bg-surface border border-outline-variant rounded-full text-[11.5px] font-medium text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary/[0.05] hover:shadow-sm transition-all duration-150">Which products are at highest stockout risk?</button>
+                <button class="quick-prompt-btn px-3.5 py-1.5 bg-surface border border-outline-variant rounded-full text-[11.5px] font-medium text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary/[0.05] hover:shadow-sm transition-all duration-150">Summarize the 30-day demand forecast</button>
+                <button class="quick-prompt-btn px-3.5 py-1.5 bg-surface border border-outline-variant rounded-full text-[11.5px] font-medium text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary/[0.05] hover:shadow-sm transition-all duration-150">What should I reorder this week?</button>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="pb-6 shrink-0">
+                <div class="flex items-end gap-2.5 bg-surface border border-outline-variant rounded-xl p-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+                    <textarea id="chat-input" rows="1" aria-label="Message SupplySphere Intelligence" placeholder="Ask about demand, risk, or inventory strategy..." class="flex-1 resize-none bg-transparent border-none focus:ring-0 text-[13.5px] px-2 py-2 max-h-32 placeholder:text-on-surface-variant"></textarea>
+                    <button id="send-chat-btn" aria-label="Send message" class="h-10 w-10 shrink-0 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span aria-hidden="true" class="material-symbols-outlined text-[20px]">send</span>
+                    </button>
+                </div>
+                <p class="text-center text-[10.5px] text-on-surface-variant mt-2.5">SupplySphere Intelligence &middot; Real-time Data Integration &middot; Responses may be inaccurate, verify critical decisions.</p>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initLayout } from '/components.js';
+        import { askCopilot, showToast, renderMarkdown } from '/api.js';
+
+        const HISTORY_KEY = 'supplysphere_chat_history_v1';
+        const MAX_STORED_MESSAGES = 60;
+
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-chat-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+        const engineStatusBadge = document.getElementById('engine-status-badge');
+        const quickPrompts = document.getElementById('quick-prompts');
+
+        // marked.js is configured to escape raw HTML from the model's reply
+        // (the model only ever returns text/markdown, never trusted markup),
+        // and every render is additionally passed through DOMPurify before
+        // being injected into the page. See renderMarkdown in api.js.
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLayout("Search SupplySphere Intelligence...");
+            loadHistory();
+            checkEngineStatus();
+
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            });
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 128) + 'px';
+            });
+
+            sendBtn.addEventListener('click', handleSend);
+            clearChatBtn.addEventListener('click', clearChat);
+
+            document.querySelectorAll('.quick-prompt-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    chatInput.value = btn.textContent;
+                    handleSend();
+                });
+            });
+        });
+
+        async function checkEngineStatus() {
+            try {
+                const res = await fetch('/api/health');
+                if (res.ok) {
+                    engineStatusBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> AI Engine Active';
+                } else {
+                    throw new Error('offline');
+                }
+            } catch {
+                engineStatusBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> AI Engine Unreachable';
+            }
+        }
+
+        function getHistory() {
+            try {
+                return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            } catch {
+                return [];
+            }
+        }
+
+        function saveHistory(history) {
+            try {
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-MAX_STORED_MESSAGES)));
+            } catch (e) {
+                // localStorage can throw (private browsing, quota) - conversation
+                // still works for this session, it just won't persist on reload.
+                console.warn('Could not persist chat history:', e);
+            }
+        }
+
+        function loadHistory() {
+            const history = getHistory();
+            if (history.length === 0) return; // keep the default welcome message
+
+            document.querySelector('[data-role="welcome"]')?.remove();
+            history.forEach(msg => addMessage(msg.text, msg.isUser, false));
+            scrollToBottom();
+            quickPrompts.classList.add('hidden');
+        }
+
+        function clearChat() {
+            localStorage.removeItem(HISTORY_KEY);
+            chatMessages.innerHTML = `
+                <div class="flex items-start gap-3" data-role="welcome">
+                    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary shrink-0 mt-0.5">
+                        <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                    </div>
+                    <div class="bg-surface border border-outline-variant rounded-xl rounded-tl-sm p-4 max-w-[85%] shadow-sm">
+                        <p class="text-[13.5px] text-on-surface leading-relaxed">
+                            Conversation cleared. Ask me anything about demand, risk, or inventory strategy.
+                        </p>
+                    </div>
+                </div>
+            `;
+            quickPrompts.classList.remove('hidden');
+            showToast("Conversation cleared.", "info");
+        }
+
+        async function handleSend() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            document.querySelector('[data-role="welcome"]')?.remove();
+            quickPrompts.classList.add('hidden');
+
+            addMessage(message, true);
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            setInputDisabled(true);
+            showTyping(true);
+
+            try {
+                const response = await askCopilot(message);
+                const replyText = response.reply || response.content || "No response received from SupplySphere Intelligence.";
+                addMessage(replyText, false);
+            } catch (error) {
+                addMessage(`Connection notice: ${error.message || 'Unable to reach the AI engine'}. Showing offline context analysis where available.`, false);
+            } finally {
+                showTyping(false);
+                setInputDisabled(false);
+                chatInput.focus();
+            }
+        }
+
+        function setInputDisabled(disabled) {
+            sendBtn.disabled = disabled;
+            chatInput.disabled = disabled;
+        }
+
+        function showTyping(visible) {
+            typingIndicator.classList.toggle('hidden', !visible);
+            typingIndicator.classList.toggle('flex', visible);
+            if (visible) scrollToBottom();
+        }
+
+        function addMessage(text, isUser, persist = true) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''} animate-[fs-msg-in_200ms_ease-out]`;
+
+            const avatar = isUser
+                ? `<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant shrink-0 mt-0.5"><span class="material-symbols-outlined text-[16px]">person</span></div>`
+                : `<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary shrink-0 mt-0.5"><span class="material-symbols-outlined text-[16px]">auto_awesome</span></div>`;
+
+            const bubbleClass = isUser
+                ? 'bg-primary text-on-primary rounded-xl rounded-tr-sm p-4 max-w-[85%] shadow-sm'
+                : 'bg-surface border border-outline-variant text-on-surface rounded-xl rounded-tl-sm p-4 max-w-[85%] shadow-sm';
+
+            const bubble = document.createElement('div');
+            bubble.className = bubbleClass;
+
+            if (isUser) {
+                // User input is plain text, never parsed as markdown - render as
+                // literal text via textContent (safe by construction, no HTML parsing).
+                const p = document.createElement('p');
+                p.className = 'text-[13.5px] leading-relaxed whitespace-pre-wrap';
+                p.textContent = text;
+                bubble.appendChild(p);
+            } else {
+                const div = document.createElement('div');
+                div.className = 'fs-markdown text-[13.5px]';
+                div.innerHTML = renderMarkdown(text);
+                bubble.appendChild(div);
+            }
+
+            wrapper.innerHTML = avatar;
+            wrapper.appendChild(bubble);
+            chatMessages.appendChild(wrapper);
+            scrollToBottom();
+
+            if (persist) {
+                const history = getHistory();
+                history.push({ text, isUser, ts: Date.now() });
+                saveHistory(history);
+            }
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>

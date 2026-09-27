@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SupplySphere AI - Reports</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="/theme.css" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0F6CBD",
+                        "primary-container": "#115EA3",
+                        "on-primary": "#ffffff",
+                        secondary: "#038387",
+                        "on-secondary": "#ffffff",
+                        error: "#D13438",
+                        background: "#E4E9F0",
+                        "on-background": "#1F2733",
+                        surface: "#E4E9F0",
+                        "on-surface": "#1F2733",
+                        "surface-variant": "#DCE2EA",
+                        "on-surface-variant": "#48505C",
+                        outline: "#B9C2D0",
+                        "outline-variant": "#DBE1EA",
+                        "surface-container-lowest": "#EDF1F6",
+                        "surface-container-low": "#DDE3EC",
+                        "surface-container": "#D8DFE9",
+                        "surface-container-high": "#CBD3E0",
+                    },
+                    fontFamily: {
+                        "title-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "data-mono": ["'JetBrains Mono'", "monospace"],
+                        "body-sm": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "body-md": ["'Segoe UI'", "Inter", "sans-serif"],
+                        "headline-lg": ["'Segoe UI'", "Inter", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased">
+    <!-- Main Content Area -->
+    <main class="fs-page-in p-6 lg:p-8 pb-24">
+        <div class="max-w-4xl mx-auto space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+                <div>
+                    <h2 class="font-headline-lg text-[26px] font-bold text-on-background tracking-tight">AI Executive Reports</h2>
+                    <p class="text-on-surface-variant mt-1 text-[13.5px]">Generate intelligent summaries and structured operational reports from live supply data.</p>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <select id="report-type" class="h-10 px-3.5 bg-surface border border-outline-variant rounded-md text-[12.5px] font-semibold focus:ring-primary focus:border-primary">
+                        <option value="executive">Executive Summary Report</option>
+                        <option value="inventory">Inventory Replenishment Report</option>
+                        <option value="risk">Inventory &amp; Stockout Risk Report</option>
+                        <option value="procurement">Procurement &amp; Order Recommendations</option>
+                    </select>
+                    <button id="generate-report-btn" class="h-10 px-5 bg-primary text-on-primary font-semibold text-[12.5px] rounded-md flex items-center justify-center gap-2 hover:bg-primary-container transition-all shadow-sm cursor-pointer">
+                        <span class="material-symbols-outlined text-[17px]">add_chart</span>
+                        Generate AI Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Report Content Area -->
+            <div id="report-container" class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col hidden">
+                <div class="p-5 border-b border-outline-variant flex flex-wrap items-center justify-between gap-3 bg-surface-container-low no-print">
+                    <div>
+                        <h3 id="report-title" class="text-[17px] font-bold text-on-background">Executive Summary Report</h3>
+                        <p class="text-[11.5px] text-on-surface-variant mt-0.5" id="report-timestamp"></p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="copy-report-btn" class="h-9 px-3.5 bg-surface text-on-surface-variant font-semibold text-[12px] rounded-md flex items-center justify-center gap-1.5 hover:bg-surface-container-high transition-colors border border-outline-variant cursor-pointer">
+                            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                            Copy Report
+                        </button>
+                        <button id="download-pdf-btn" class="h-9 px-3.5 bg-primary/10 text-primary font-semibold text-[12px] rounded-md flex items-center justify-center gap-1.5 hover:bg-primary/15 transition-colors border border-primary/20 cursor-pointer">
+                            <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                            Download PDF
+                        </button>
+                    </div>
+                </div>
+                <!-- Printed title, shown only in the in-place print flow (hidden on screen) -->
+                <div id="report-print-header" class="hidden p-8 pb-0">
+                    <h1 class="text-[22px] font-bold text-on-background border-b-2 border-primary pb-3 mb-1"></h1>
+                    <p class="text-[11px] text-on-surface-variant mb-4"></p>
+                </div>
+                <div class="p-8">
+                    <div id="report-body" class="fs-markdown text-[13.5px]">
+                        <!-- Rendered Markdown report content is injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Skeleton (shown while the AI report is generating) -->
+            <div id="report-skeleton" class="bg-surface rounded-xl border border-outline-variant shadow-sm p-8 hidden no-print">
+                <div class="fs-skeleton h-6 w-2/3 rounded mb-3"></div>
+                <div class="fs-skeleton h-3.5 w-1/3 rounded mb-8"></div>
+                <div class="fs-skeleton h-4 w-1/4 rounded mb-4"></div>
+                <div class="space-y-2.5 mb-8">
+                    <div class="fs-skeleton h-3.5 w-full rounded"></div>
+                    <div class="fs-skeleton h-3.5 w-11/12 rounded"></div>
+                    <div class="fs-skeleton h-3.5 w-4/5 rounded"></div>
+                </div>
+                <div class="fs-skeleton h-4 w-1/4 rounded mb-4"></div>
+                <div class="space-y-2.5">
+                    <div class="fs-skeleton h-3.5 w-full rounded"></div>
+                    <div class="fs-skeleton h-3.5 w-5/6 rounded"></div>
+                    <div class="fs-skeleton h-3.5 w-2/3 rounded"></div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="bg-surface rounded-xl border border-outline-variant shadow-sm flex flex-col items-center justify-center py-20 text-on-surface-variant no-print">
+                <span class="material-symbols-outlined text-5xl mb-4 text-primary opacity-40">description</span>
+                <p class="text-[15px] font-semibold text-on-surface">No report generated yet</p>
+                <p class="text-[12px] text-on-surface-variant mt-1">Select a report type and click "Generate AI Report" above.</p>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initLayout } from '/components.js';
+        import { generateReport, showToast, renderMarkdown } from '/api.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initLayout("Search reports...");
+        });
+
+        const generateBtn = document.getElementById('generate-report-btn');
+        const copyBtn = document.getElementById('copy-report-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const reportTypeSelect = document.getElementById('report-type');
+        const reportContainer = document.getElementById('report-container');
+        const reportSkeleton = document.getElementById('report-skeleton');
+        const emptyState = document.getElementById('empty-state');
+        const reportTitle = document.getElementById('report-title');
+        const reportTimestamp = document.getElementById('report-timestamp');
+        const reportBody = document.getElementById('report-body');
+        const reportPrintHeader = document.getElementById('report-print-header');
+
+        let lastReportRawText = '';
+        let lastReportTitle = '';
+        let lastReportType = '';
+
+        // Wraps h2/h3 headings whose text matches a known report-section
+        // keyword (Analysis, Risk, Recommendation, Impact/Business Impact,
+        // Summary, Action) with a small colored icon chip - purely a visual
+        // treatment of headings the AI already wrote, no content change.
+        const SECTION_KEYWORDS = [
+            { match: /risk/i, cls: 'fs-section-risk', icon: 'warning' },
+            { match: /recommend|action/i, cls: 'fs-section-recommendation', icon: 'lightbulb' },
+            { match: /impact/i, cls: 'fs-section-impact', icon: 'trending_up' },
+            { match: /analysis|summary|overview/i, cls: 'fs-section-analysis', icon: 'query_stats' },
+        ];
+        function styleReportSectionHeadings(container) {
+            container.querySelectorAll('h2, h3').forEach(h => {
+                const rule = SECTION_KEYWORDS.find(r => r.match.test(h.textContent));
+                if (!rule || h.querySelector('.fs-section-chip')) return;
+                h.classList.add(rule.cls);
+                h.innerHTML = `<span class="fs-section-chip"><span class="material-symbols-outlined">${rule.icon}</span>${h.innerHTML}</span>`;
+            });
+        }
+
+        const TITLE_MAP = {
+            executive: "Executive Summary & AI Overview",
+            inventory: "Inventory Replenishment & Stock Report",
+            risk: "Inventory & Stockout Risk Analysis Report",
+            procurement: "Procurement & Purchase Order Report"
+        };
+
+        generateBtn.addEventListener('click', async () => {
+            const type = reportTypeSelect.value;
+
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[17px]">progress_activity</span> Generating Report...';
+            showToast("Generating AI report from database context...", "info");
+
+            emptyState.classList.add('hidden');
+            reportContainer.classList.add('hidden');
+            reportSkeleton.classList.remove('hidden');
+
+            try {
+                const data = await generateReport(type);
+
+                const title = TITLE_MAP[type] || `${type.toUpperCase()} Report`;
+                const timestamp = `Generated on ${new Date().toLocaleString('en-IN')}`;
+
+                lastReportRawText = data.content;
+                lastReportTitle = title;
+                lastReportType = type;
+
+                reportTitle.textContent = title;
+                reportTimestamp.textContent = timestamp;
+                reportBody.innerHTML = renderMarkdown(data.content);
+                styleReportSectionHeadings(reportBody);
+
+                // Mirrors the same title/timestamp into the print-only header -
+                // it stays hidden on screen and is only revealed by the
+                // @media print rule in theme.css, so a plain browser Ctrl+P
+                // still produces a clean printout without the app chrome,
+                // even though the in-app Print button has been removed.
+                reportPrintHeader.querySelector('h1').textContent = title;
+                reportPrintHeader.querySelector('p').textContent = `SupplySphere AI System \u00b7 ${timestamp}`;
+
+                reportSkeleton.classList.add('hidden');
+                reportContainer.classList.remove('hidden');
+                reportContainer.scrollIntoView({ behavior: 'smooth' });
+                showToast("Report successfully generated!", "success");
+            } catch (error) {
+                console.error('Error generating report:', error);
+                reportSkeleton.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<span class="material-symbols-outlined text-[17px]">add_chart</span> Generate AI Report';
+            }
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            if (!lastReportRawText) return;
+            try {
+                await navigator.clipboard.writeText(lastReportRawText);
+                showToast("Report copied to clipboard.", "success");
+            } catch (err) {
+                showToast("Could not copy automatically - please select and copy manually.", "warning");
+            }
+        });
+
+        // Download PDF: calls the backend's /api/report/pdf endpoint, which
+        // returns a real, server-generated PDF (see report_pdf.py). We fetch
+        // it as a Blob and trigger the download via a temporary Object URL -
+        // no new tab, no window.print() dependency, no client-side PDF library.
+        downloadPdfBtn.addEventListener('click', async () => {
+            if (!lastReportRawText) return;
+
+            const originalHtml = downloadPdfBtn.innerHTML;
+            downloadPdfBtn.disabled = true;
+            downloadPdfBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span> Preparing PDF...';
+
+            try {
+                const res = await fetch('/api/report/pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        report_type: lastReportType,
+                        title: lastReportTitle,
+                        content: lastReportRawText
+                    })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Failed to generate PDF.');
+                }
+
+                const blob = await res.blob();
+                const objectUrl = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = `supplysphere_${lastReportType}_report.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(objectUrl);
+
+                showToast('PDF downloaded.', 'success');
+            } catch (error) {
+                showToast(error.message || 'Could not download PDF.', 'error');
+            } finally {
+                downloadPdfBtn.disabled = false;
+                downloadPdfBtn.innerHTML = originalHtml;
+            }
+        });
+    </script>
+</body>
+</html>

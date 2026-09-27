@@ -1,0 +1,363 @@
+/*
+theme.css
+------------------------------------------------------------
+Shared visual design system for SupplySphere AI, served like
+api.js / components.js (see backend/main.py) so every page stays
+visually consistent from one place instead of duplicating rules
+across five <style> blocks.
+
+Design direction: NEUMORPHIC (soft UI), per the Neuromorphic UI
+Design Report. Surfaces are the same tone as the page background
+and are read only through soft dual shadows (one warm-dark, one
+cool-light) rather than hairline borders - buttons/cards read as
+"extruded", inputs read as "pressed in". Corner radii and layout
+are unchanged from the previous pass; only color tokens (per-page
+Tailwind config) and elevation (here) changed.
+
+Accessibility note: textbook neumorphism is famously low-contrast
+(same-color-as-background surfaces, faint shadows only). The report
+itself flags this as neumorphism's main accessibility risk, so this
+implementation deviates from the purist look in three ways: (1)
+on-surface/on-surface-variant text is darkened well past typical
+neumorphic mockups to clear WCAG AA (4.5:1) on the new background,
+(2) status badges (.fs-badge-*) stay flat/solid-color rather than
+neumorphic, since color is their only signal, (3) outline-variant
+is a faint-but-nonzero tone (not identical to the background) so
+table row dividers stay legible in dense data views.
+
+Each page still defines its own Tailwind color tokens (so utility
+classes like bg-primary keep working everywhere); this file only
+adds the things Tailwind's utility classes can't express cleanly:
+elevation, motion, scrollbars, and markdown/prose typography for
+AI-generated content.
+------------------------------------------------------------
+*/
+
+/* ---------- Neumorphic shadow-color tokens ----------
+   Derived from the shared background (#E4E9F0): a darker, warm-gray
+   "ambient shadow" tone and a near-white "highlight" tone, at the
+   opacity the report's CSS spec calls for (0.12 dark / 0.7 light),
+   nudged slightly stronger so shapes stay readable at this app's
+   smaller component sizes (KPI cards, buttons, inputs). */
+:root {
+    --neu-shadow-dark: rgba(148, 163, 184, 0.45);
+    --neu-shadow-light: rgba(255, 255, 255, 0.85);
+    --neu-shadow-dark-strong: rgba(148, 163, 184, 0.6);
+}
+
+/* ---------- Elevation (neumorphic dual soft-shadow, replaces flat Fluent shadow) ---------- */
+.shadow-sm {
+    box-shadow: 4px 4px 9px var(--neu-shadow-dark), -4px -4px 9px var(--neu-shadow-light) !important;
+}
+.shadow-md {
+    box-shadow: 6px 6px 13px var(--neu-shadow-dark), -6px -6px 13px var(--neu-shadow-light) !important;
+}
+.shadow-lg, .shadow-xl {
+    box-shadow: 9px 9px 18px var(--neu-shadow-dark-strong), -9px -9px 18px var(--neu-shadow-light) !important;
+}
+
+.card-hover {
+    transition: box-shadow 200ms cubic-bezier(0.1, 0.9, 0.2, 1), transform 200ms ease;
+}
+.card-hover:hover {
+    box-shadow: 6px 6px 14px var(--neu-shadow-dark-strong), -6px -6px 14px var(--neu-shadow-light);
+}
+
+/* ---------- Material Symbols default weight ---------- */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    font-size: 20px;
+}
+
+/* ---------- Scrollbars (thin, neutral - matches Fabric/Azure Portal) ---------- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #B9C2D0 transparent;
+}
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background-color: #B9C2D0;
+    border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: #94A0B3;
+}
+
+/* ---------- Skip link (visually hidden until keyboard-focused) ---------- */
+.sr-only-focusable {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    padding: 10px 16px;
+    background: #0F6CBD;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 0 0 8px 0;
+}
+.sr-only-focusable:focus {
+    left: 0;
+}
+
+/* ---------- Focus ring (accessible, Fluent-blue) ---------- */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid #0F6CBD;
+    outline-offset: 1px;
+}
+
+/* ---------- Page entrance ---------- */
+@keyframes fs-page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.fs-page-in {
+    animation: fs-page-in 260ms ease-out;
+}
+
+/* ---------- Loading skeleton shimmer (used in empty/loading states) ---------- */
+@keyframes fs-shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+.fs-skeleton {
+    background: linear-gradient(90deg, #DCE2EA 25%, #CBD3E0 37%, #DCE2EA 63%);
+    background-size: 400px 100%;
+    animation: fs-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ---------- Markdown / AI-generated content typography ---------- */
+.fs-markdown {
+    font-size: 14px;
+    line-height: 1.65;
+    color: inherit;
+}
+.fs-markdown > *:first-child { margin-top: 0; }
+.fs-markdown > *:last-child { margin-bottom: 0; }
+.fs-markdown h1, .fs-markdown h2, .fs-markdown h3, .fs-markdown h4 {
+    font-weight: 600;
+    color: #1F2733;
+    margin-top: 1.4em;
+    margin-bottom: 0.5em;
+    line-height: 1.3;
+}
+.fs-markdown h1 { font-size: 1.35em; border-bottom: 1px solid #DBE1EA; padding-bottom: 0.35em; }
+.fs-markdown h2 { font-size: 1.18em; border-bottom: 1px solid #DBE1EA; padding-bottom: 0.3em; }
+.fs-markdown h3 { font-size: 1.05em; }
+.fs-markdown h4 { font-size: 0.98em; }
+.fs-markdown p { margin: 0.65em 0; }
+.fs-markdown strong { font-weight: 600; color: #1F2733; }
+.fs-markdown ul, .fs-markdown ol {
+    margin: 0.6em 0;
+    padding-left: 1.4em;
+}
+.fs-markdown ul { list-style: disc; }
+.fs-markdown ol { list-style: decimal; }
+.fs-markdown li { margin: 0.28em 0; }
+.fs-markdown li::marker { color: #0F6CBD; }
+.fs-markdown a { color: #0F6CBD; text-decoration: underline; text-underline-offset: 2px; }
+.fs-markdown code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.88em;
+    background: #DCE2EA;
+    border: 1px solid #DBE1EA;
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+}
+.fs-markdown pre {
+    background: #DCE2EA;
+    border: 1px solid #DBE1EA;
+    border-radius: 6px;
+    padding: 0.85em 1em;
+    overflow-x: auto;
+    margin: 0.75em 0;
+}
+.fs-markdown pre code { background: none; border: none; padding: 0; }
+.fs-markdown blockquote {
+    border-left: 3px solid #0F6CBD;
+    background: #F3F9FD;
+    padding: 0.5em 1em;
+    margin: 0.75em 0;
+    color: #3B4453;
+    border-radius: 0 4px 4px 0;
+}
+.fs-markdown hr { border: none; border-top: 1px solid #DBE1EA; margin: 1.2em 0; }
+.fs-markdown table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.85em 0;
+    font-size: 0.93em;
+}
+.fs-markdown th, .fs-markdown td {
+    border: 1px solid #DBE1EA;
+    padding: 0.5em 0.75em;
+    text-align: left;
+}
+.fs-markdown thead th {
+    background: #DCE2EA;
+    font-weight: 600;
+    color: #1F2733;
+}
+.fs-markdown tbody tr:nth-child(even) { background: #E4E9F0; }
+.fs-markdown tbody tr { transition: background-color 120ms ease; }
+.fs-markdown tbody tr:hover { background: #F3F9FD; }
+
+.fs-section-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.15em 0.1em;
+}
+.fs-section-chip .material-symbols-outlined { font-size: 1em; }
+.fs-markdown h2.fs-section-analysis, .fs-markdown h3.fs-section-analysis { color: #0F6CBD; }
+.fs-markdown h2.fs-section-risk, .fs-markdown h3.fs-section-risk { color: #A80000; }
+.fs-markdown h2.fs-section-recommendation, .fs-markdown h3.fs-section-recommendation { color: #0E6A0E; }
+.fs-markdown h2.fs-section-impact, .fs-markdown h3.fs-section-impact { color: #8A6100; }
+
+.fs-markdown-inverse, .fs-markdown-inverse strong, .fs-markdown-inverse h1,
+.fs-markdown-inverse h2, .fs-markdown-inverse h3 { color: inherit; }
+
+/* ---------- Chat message entrance (SupplySphere Intelligence) ---------- */
+@keyframes fs-msg-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Chat typing indicator ---------- */
+@keyframes fs-typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+}
+.fs-typing-dot {
+    animation: fs-typing-bounce 1.2s ease-in-out infinite;
+}
+
+/* ---------- Global button polish (neumorphic press) ---------- */
+button {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, opacity 150ms ease, transform 80ms ease;
+}
+/* Pressing a raised (shadow-sm/md/lg) button inverts its shadow to
+   read as "sunken", per the report's button/toggle spec; buttons
+   without an elevation class (e.g. plain text links) are unaffected
+   since they have no outer shadow to invert. */
+button:not(:disabled):active {
+    transform: translateY(0.5px);
+    box-shadow: inset 3px 3px 7px var(--neu-shadow-dark-strong), inset -3px -3px 7px var(--neu-shadow-light) !important;
+}
+button:disabled {
+    cursor: not-allowed;
+}
+
+/* ---------- Global select/input polish (neumorphic inset "pressed" field) ---------- */
+select {
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+    box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);
+    cursor: pointer;
+}
+input, textarea {
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+    box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);
+}
+/* Focus keeps the existing accessible outline (below) and adds a soft
+   brand-color glow on top of the inset shadow, per the report's
+   "Input States" micro-interaction spec. */
+select:focus, input:focus, textarea:focus {
+    box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light), 0 0 0 3px rgba(15, 108, 189, 0.18);
+}
+
+/* ---------- Table row polish ---------- */
+tbody tr {
+    transition: background-color 120ms ease;
+}
+
+/* ---------- Status badges ---------- */
+.fs-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    padding: 0.28em 0.7em;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+.fs-badge-healthy, .fs-badge-low {
+    background: #DFF6DD;
+    color: #0E6A0E;
+    border-color: #B4E6B4;
+}
+.fs-badge-warning, .fs-badge-medium {
+    background: #FFF4CE;
+    color: #8A6100;
+    border-color: #F5DA8C;
+}
+.fs-badge-critical, .fs-badge-high {
+    background: #FDE7E9;
+    color: #A80000;
+    border-color: #F3B6BB;
+}
+.fs-badge-neutral {
+    background: #F3F2F1;
+    color: #5B5955;
+    border-color: #E1DFDD;
+}
+.fs-badge-primary {
+    background: rgba(15, 108, 189, 0.1);
+    color: #0F6CBD;
+    border-color: rgba(15, 108, 189, 0.22);
+}
+
+/* ---------- Print (Reports page) ---------- */
+@media print {
+    aside, nav, header, .no-print { display: none !important; }
+    body, main { background: #fff !important; }
+    #report-print-header { display: block !important; }
+}
+
+/* ---------- KPI Card polish (Dashboard / Inventory / Forecast / Risk) ---------- */
+.fs-kpi-card {
+    position: relative;
+    overflow: hidden;
+    padding-left: 22px !important;
+    box-shadow: 6px 6px 13px var(--neu-shadow-dark), -6px -6px 13px var(--neu-shadow-light);
+    transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.fs-kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--fs-kpi-accent, #0F6CBD);
+    border-radius: 4px 0 0 4px;
+}
+.fs-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 8px 8px 18px var(--neu-shadow-dark-strong), -8px -8px 18px var(--neu-shadow-light);
+}
+.fs-kpi-icon-chip {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 180ms ease;
+}
+.fs-kpi-card:hover .fs-kpi-icon-chip {
+    transform: scale(1.08);
+}
+.fs-kpi-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
